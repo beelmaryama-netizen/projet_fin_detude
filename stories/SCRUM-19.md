@@ -7,9 +7,9 @@
 
 ## User Story
 
-En tant qu’utilisateur,
-je veux pouvoir récupérer mon mot de passe oublié,
-afin de retrouver l’accès à mon compte MagiquePro.
+En tant que développeur frontend,
+je veux créer l’écran Mot de passe oublié,
+afin de permettre à l’utilisateur de récupérer l’accès à son compte MagiquePro.
 
 ## Branche Git
 
