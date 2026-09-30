@@ -7,9 +7,9 @@
 
 ## User Story
 
-En tant qu’utilisateur,
-je veux recevoir une confirmation après une action importante,
-afin de savoir que l’opération a bien été prise en compte.
+En tant que développeur frontend,
+je veux créer l’écran de confirmation,
+afin d’afficher un message clair après une action importante dans l’application MagiquePro.
 
 ## Branche Git
 
