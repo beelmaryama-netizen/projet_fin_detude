@@ -7,9 +7,9 @@
 
 ## User Story
 
-En tant qu’utilisateur,
-je veux confirmer mon identité avec une double authentification,
-afin de sécuriser davantage l’accès à mon compte MagiquePro.
+En tant que développeur frontend,
+je veux créer l’écran de double authentification,
+afin de renforcer la sécurité de connexion dans l’application MagiquePro.
 
 ## Branche Git
 
