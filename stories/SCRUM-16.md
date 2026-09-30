@@ -7,9 +7,9 @@
 
 ## User Story
 
-En tant qu’utilisateur,
-je veux accéder à mon espace personnel,
-afin de consulter les services MagiquePro et faire une demande facilement.
+En tant que développeuse frontend,
+je veux créer l’interface principale de l’utilisateur,
+afin de présenter clairement les services MagiquePro et faciliter la demande de devis.
 
 ## Branche Git
 
