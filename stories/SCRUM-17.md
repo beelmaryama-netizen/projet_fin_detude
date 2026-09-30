@@ -7,9 +7,9 @@
 
 ## User Story
 
-En tant qu’employeur,
-je veux accéder à un tableau de bord,
-afin de consulter et gérer les demandes des clients MagiquePro.
+En tant que développeur frontend,
+je veux créer le tableau de bord de l’employeur,
+afin de permettre la consultation et la gestion des demandes des clients MagiquePro.
 
 ## Branche Git
 
