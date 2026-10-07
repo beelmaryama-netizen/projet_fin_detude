@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "MagicPro",
+    "slug": "magicpro-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F8F9FA",
+    "ios": { "supportsTablet": true },
+    "android": { "predictiveBackGestureEnabled": true },
+    "plugins": ["expo-font", "expo-secure-store", ["expo-image-picker", {
+      "photosPermission": "Autoriser MagicPro à sélectionner les photos du logement.",
+      "cameraPermission": false,
+      "microphonePermission": false
+    }]],
+    "web": { "name": "MagicPro", "themeColor": "#1565C0" }
+  }
+}
