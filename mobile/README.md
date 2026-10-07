@@ -2,30 +2,45 @@
 
 Application React Native + TypeScript exécutée avec Expo.
 
-## Partie SCRUM-16 — Maryem
+## SCRUM-16 — Maryem Belouaar
 
-Cette branche contient l'interface principale client :
-- accueil client;
-- choix du type de service;
-- début du parcours de demande;
-- consultation des réservations;
+La branche `feature/SCRUM-16-interface-utilisateur` contient la partie frontend client de Maryem :
+
+- accueil client professionnel;
+- demande de service;
+- catégories Résidentiel, Commercial, Industriel et Médical;
+- aperçu des prochaines réservations;
 - navigation client;
-- identité visuelle MagiquePro.
+- identité visuelle MagiquePro;
+- mode clair / mode sombre activable avec l’icône lune/soleil.
 
-Le projet reste compatible avec le flux d'authentification déjà présent dans la branche.
-
-## Lancer l'application
+## Lancer avec Expo
 
 ```bash
 cd mobile
 npm install
-npx expo start
+npx expo start -c
 ```
 
-Ensuite :
-- téléphone : installer Expo Go et scanner le QR code;
-- Android Studio : appuyer sur `a`;
-- navigateur : appuyer sur `w`.
+Sur Android :
+1. Installer **Expo Go** depuis Google Play.
+2. Mettre le PC et le téléphone sur le même Wi-Fi.
+3. Scanner le QR code affiché par Expo.
+
+Si le réseau local bloque le QR :
+
+```bash
+npx expo start --tunnel
+```
+
+Compte client de démonstration :
+
+```text
+client@magicpro.demo
+MagicPro!2026
+```
+
+Une fois connecté, utiliser l’icône **lune/soleil** dans l’en-tête pour basculer entre mode clair et mode sombre.
 
 ## Vérifications
 
@@ -33,5 +48,3 @@ Ensuite :
 npm run typecheck
 npm test
 ```
-
-Le mobile utilise actuellement des données de démonstration pour permettre la présentation sans dépendre d'une API déjà déployée.
