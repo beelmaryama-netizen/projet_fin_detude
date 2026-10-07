@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { AuthLayout } from '../../auth/components/AuthLayout';
@@ -6,7 +7,9 @@ import { Button } from '../../../components/Button';
 import { ControlledField } from '../../../components/ControlledField';
 import { NumberStepper } from '../../../components/NumberStepper';
 import { SelectionCard } from '../../../components/SelectionCard';
-import { colors, spacing } from '../../../theme/tokens';
+import { spacing } from '../../../theme/tokens';
+import { useAppTheme } from '../../../theme/useAppTheme';
+import type { AppPalette } from '../../../theme/palette';
 import type { ClientScreenProps } from '../../../navigation/types';
 import { useResidentialDetails } from '../hooks/useResidentialDetails';
 import { RequestProgress } from '../components/RequestProgress';
@@ -18,10 +21,14 @@ const propertyOptions = [
   { value: 'CONDO', title: 'Condo', icon: 'grid-outline' },
   { value: 'HOUSE', title: 'Maison', icon: 'home-outline' },
 ] as const;
+
 export function ResidentialPropertyDetailsScreen({ navigation }: ClientScreenProps<'ResidentialPropertyDetailsScreen'>) {
   const details = useResidentialDetails(navigation);
   const description = details.form.watch('description');
+  const { palette } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   if (!details.ready) return null;
+
   return <AuthLayout title="Détails du logement" subtitle="Aidez-nous à mieux comprendre votre espace pour vous offrir un service adapté."
     progress={<RequestProgress activeStep={2} />} onBack={() => navigation.goBack()}>
     <Controller control={details.form.control} name="propertyType" render={({ field, fieldState }) => <View style={styles.group}>
@@ -54,8 +61,11 @@ export function ResidentialPropertyDetailsScreen({ navigation }: ClientScreenPro
     <Button title="Continuer" icon="arrow-forward" onPress={() => void details.continueRequest()} />
   </AuthLayout>;
 }
-const styles = StyleSheet.create({
-  group: { gap: spacing.sm }, options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  counts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }, count: { flexGrow: 1, flexBasis: '42%', minWidth: 125 },
-  error: { color: colors.danger }, description: { minHeight: 120 }, counter: { textAlign: 'right', color: colors.muted },
-});
+
+function createStyles(palette: AppPalette) {
+  return StyleSheet.create({
+    group: { gap: spacing.sm }, options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    counts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }, count: { flexGrow: 1, flexBasis: '42%', minWidth: 125 },
+    error: { color: palette.danger }, description: { minHeight: 120 }, counter: { textAlign: 'right', color: palette.textSecondary },
+  });
+}
