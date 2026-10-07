@@ -9,7 +9,7 @@
     "ios": { "supportsTablet": true },
     "android": { "predictiveBackGestureEnabled": true },
     "plugins": ["expo-font", "expo-secure-store", ["expo-image-picker", {
-      "photosPermission": "Autoriser MagicPro à sélectionner les photos du logement.",
+      "photosPermission": "Autoriser MagicPro à sélectionner des photos pour vos demandes et rapports de mission.",
       "cameraPermission": false,
       "microphonePermission": false
     }]],

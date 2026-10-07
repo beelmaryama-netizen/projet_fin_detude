@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Session } from '../types/identity';
 import { useRequestDraftStore } from './requestDraftStore';
+import { useEmployeeStore } from '../features/employee/hooks/useEmployeeStore';
 
 interface AuthState {
   session: Session | null;
@@ -12,9 +13,11 @@ export const useAuthStore = create<AuthState>(set => ({
   session: null,
   setSession: session => {
     useRequestDraftStore.getState().bindOwner(session.user.role === 'CLIENT' ? session.user.id : null);
+    useEmployeeStore.getState().bindOwner(session.user.role === 'EMPLOYEE' ? session.user : null);
     set({ session });
   },
   clearSession: () => {
+    useEmployeeStore.getState().bindOwner(null);
     useRequestDraftStore.getState().bindOwner(null);
     useRequestDraftStore.getState().reset();
     set({ session: null });

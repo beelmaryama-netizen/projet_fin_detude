@@ -3,6 +3,7 @@ import type { Challenge } from '../features/auth/types/auth';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { RequestCategory } from '../features/requests/types/request';
+import type { EmployeeStackParamList } from '../features/employee/types/navigation';
 
 export type AuthStackParamList = {
   Splash: undefined;
@@ -31,6 +32,7 @@ export type ClientStackParamList = {
 export type RootStackParamList = AuthStackParamList & {
   Client: NavigatorScreenParams<ClientStackParamList> | undefined;
   EmployerDashboard: undefined;
+  Employee: NavigatorScreenParams<EmployeeStackParamList> | undefined;
 };
 export type ClientScreenProps<T extends keyof ClientStackParamList> = NativeStackScreenProps<ClientStackParamList, T>;
 export type ClientTabScreenProps<T extends keyof ClientTabParamList> = CompositeScreenProps<BottomTabScreenProps<ClientTabParamList, T>, NativeStackScreenProps<ClientStackParamList>>;

@@ -1,6 +1,6 @@
 # MagicPro Mobile — Authentification et espace client
 
-Module Expo / React Native / TypeScript strict. Cinq écrans publics et premiers écrans client, services entièrement simulés. Aucun backend, envoi de courriel ou fournisseur OAuth réel n'est appelé. Voir `LIVRAISON_CLIENT.md` pour le détail du module client et ses limites.
+Module Expo / React Native / TypeScript strict. Cinq écrans publics et premiers écrans client, services entièrement simulés. Aucun backend, envoi de courriel ou fournisseur OAuth réel n'est appelé. Voir `LIVRAISON_CLIENT.md` pour le détail du module client et ses limites, et [LIVRAISON_EMPLOYE.md](LIVRAISON_EMPLOYE.md) pour l’espace employé de Meryem, son accès et ses règles de démonstration.
 
 ## Démarrer
 
@@ -25,7 +25,7 @@ Le projet utilise les versions React/React Native du modèle TypeScript officiel
 - Connexion → Inscription client / Mot de passe oublié / Vérification si requise.
 - Inscription → Vérification du courriel → confirmation de connexion.
 - Mot de passe oublié → Vérification du code → nouveaux mots de passe sur le même écran → Connexion.
-- La connexion CLIENT ouvre l’accueil client avec les onglets Accueil, Mes demandes, Réservations et Profil. EMPLOYEE et ADMIN conservent l’état de confirmation avec déconnexion.
+- La connexion CLIENT ouvre l’accueil client avec les onglets Accueil, Mes demandes, Réservations et Profil. EMPLOYEE ouvre l’espace employé après la vérification existante : accueil de première utilisation, missions, checklist et rapport. ADMIN ouvre le tableau de bord employeur ; chaque espace conserve la déconnexion existante.
 - Accueil client → Type de service → Détails du logement pour Résidentiel. Les autres catégories ouvrent un placeholder explicite. La date et les préférences disposent d’une route préparée, sans envoi de demande.
 
 ## Essayer les mocks
