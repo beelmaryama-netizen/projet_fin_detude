@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import { emptyResidentialDetails, MAX_REQUEST_PHOTOS, type RequestCategory, type RequestPhoto, type ResidentialDetails } from '../features/requests/types/request';
+import { emptyResidentialDetails, emptyRequestPreferences, type RequestPreferences, MAX_REQUEST_PHOTOS, type RequestCategory, type RequestPhoto, type ResidentialDetails } from '../features/requests/types/request';
 
 interface RequestDraftState {
   ownerId: string | null;
   category: RequestCategory | null;
   residential: ResidentialDetails;
   photos: RequestPhoto[];
+  preferences: RequestPreferences;
+  updatePreferences: (details: Partial<RequestPreferences>) => void;
   bindOwner: (ownerId: string | null) => void;
   setCategory: (category: RequestCategory) => void;
   updateResidential: (details: Partial<ResidentialDetails>) => void;
@@ -13,7 +15,7 @@ interface RequestDraftState {
   removePhoto: (id: string) => void;
   reset: () => void;
 }
-const emptyDraft = () => ({ category: null, residential: emptyResidentialDetails(), photos: [] });
+const emptyDraft = () => ({ category: null, residential: emptyResidentialDetails(), photos: [], preferences: emptyRequestPreferences() });
 
 /** Session-scoped draft: survives screen unmounts, never crosses account boundaries. */
 export const useRequestDraftStore = create<RequestDraftState>((set, get) => ({
@@ -21,6 +23,7 @@ export const useRequestDraftStore = create<RequestDraftState>((set, get) => ({
   bindOwner: ownerId => { if (get().ownerId !== ownerId) set({ ownerId, ...emptyDraft() }); },
   setCategory: category => set({ category }),
   updateResidential: details => set(state => ({ residential: { ...state.residential, ...details } })),
+  updatePreferences: details => set(state => ({ preferences: { ...state.preferences, ...details } })),
   addPhotos: photos => {
     const existing = get().photos;
     const unique = photos.filter((photo, index, list) => !existing.some(item => item.uri === photo.uri)

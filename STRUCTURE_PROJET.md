@@ -1,15 +1,3 @@
-# Structure MagiquePro
+# Structure du dépôt
 
-La branche SCRUM-16 est maintenant organisée en deux espaces séparés :
-
-```text
-backend/
-  src/
-mobile/
-  src/
-```
-
-- **mobile/** : application Expo / React Native / TypeScript.
-- **backend/** : base NestJS indépendante.
-
-Pour la démonstration de Maryem, lancer le dossier **mobile/** avec Expo.
+Voir README.md : `mobile/` pour les écrans, `backend/` pour l’API et la base de données. Les branches et leur historique sont conservés.

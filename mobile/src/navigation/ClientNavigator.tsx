@@ -11,6 +11,9 @@ import { ReservationDetailsScreen } from '../features/client/screens/Reservation
 import { RequestTypeScreen } from '../features/requests/screens/RequestTypeScreen';
 import { ResidentialPropertyDetailsScreen } from '../features/requests/screens/ResidentialPropertyDetailsScreen';
 
+import { RequestPreferencesScreen } from '../features/requests/screens/RequestPreferencesScreen';
+import { RequestReviewScreen } from '../features/requests/screens/RequestReviewScreen';
+
 const Stack = createNativeStackNavigator<ClientStackParamList>();
 const Tabs = createBottomTabNavigator<ClientTabParamList>();
 
@@ -62,7 +65,8 @@ export function ClientNavigator() {
       <Stack.Screen name="RequestTypeScreen" component={RequestTypeScreen} />
       <Stack.Screen name="ResidentialPropertyDetailsScreen" component={ResidentialPropertyDetailsScreen} />
       <Stack.Screen name="RequestFlowPlaceholder" component={ClientPlaceholderScreen} />
-      <Stack.Screen name="RequestNextStep" component={ClientPlaceholderScreen} />
+      <Stack.Screen name="RequestNextStep" component={RequestPreferencesScreen} />
+      <Stack.Screen name="RequestReview" component={RequestReviewScreen} />
       <Stack.Screen name="Notifications" component={ClientPlaceholderScreen} />
       <Stack.Screen name="ReservationDetails" component={ReservationDetailsScreen} />
     </Stack.Navigator>

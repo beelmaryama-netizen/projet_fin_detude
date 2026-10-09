@@ -25,6 +25,7 @@ export type ClientStackParamList = {
   ResidentialPropertyDetailsScreen: undefined;
   RequestFlowPlaceholder: { category: RequestCategory };
   RequestNextStep: undefined;
+  RequestReview: undefined;
   ReservationDetails: { id: string };
   Notifications: undefined;
 };

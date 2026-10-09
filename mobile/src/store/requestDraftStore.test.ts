@@ -12,20 +12,26 @@ describe('request draft isolation and photos', () => {
     const draft = useRequestDraftStore.getState();
     draft.setCategory('RESIDENTIAL');
     draft.updateResidential({ propertyType: 'HOUSE', areaSqft: '1200', hasPets: false });
+    draft.updatePreferences({ date: '2027-01-01', timeSlot: 'MORNING', notes: 'Sans parfum' });
     draft.setCategory('COMMERCIAL');
     draft.setCategory('RESIDENTIAL');
     useAuthStore.getState().setSession(session('a'));
+    expect(useRequestDraftStore.getState().preferences.notes).toBe('Sans parfum');
     expect(useRequestDraftStore.getState().residential).toMatchObject({ propertyType: 'HOUSE', areaSqft: '1200', hasPets: false });
   });
   it('clears private details and photos on account change and logout', () => {
     useAuthStore.getState().setSession(session('a'));
     useRequestDraftStore.getState().updateResidential({ description: 'Private address details' });
+    useRequestDraftStore.getState().updatePreferences({ notes: 'Private preferences' });
     useRequestDraftStore.getState().addPhotos([photo('1')]);
     useAuthStore.getState().setSession(session('b'));
     expect(useRequestDraftStore.getState().residential.description).toBe('');
     expect(useRequestDraftStore.getState().photos).toEqual([]);
+    expect(useRequestDraftStore.getState().preferences).toEqual({ date: '', timeSlot: '', notes: '' });
     useRequestDraftStore.getState().setCategory('MEDICAL');
+    useRequestDraftStore.getState().updatePreferences({ notes: 'Other private preferences' });
     useAuthStore.getState().clearSession();
+    expect(useRequestDraftStore.getState().preferences.notes).toBe('');
     expect(useRequestDraftStore.getState()).toMatchObject({ ownerId: null, category: null, photos: [] });
   });
   it('deduplicates and caps photos at five, then permits replacing a removed photo', () => {

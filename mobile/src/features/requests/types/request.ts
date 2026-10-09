@@ -9,6 +9,8 @@ export interface ResidentialDetails {
   hasPets: boolean | null;
   description: string;
 }
+export interface RequestPreferences { date: string; timeSlot: 'MORNING' | 'AFTERNOON' | ''; notes: string }
+export const emptyRequestPreferences = (): RequestPreferences => ({ date: '', timeSlot: '', notes: '' });
 export interface RequestPhoto { id: string; uri: string; name: string }
 export const MAX_REQUEST_PHOTOS = 5;
 export const MAX_DESCRIPTION_LENGTH = 500;

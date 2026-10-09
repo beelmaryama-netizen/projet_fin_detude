@@ -8,7 +8,7 @@ L’authentification CLIENT ouvre `ClientHomeScreen`. Le logo PNG fourni est par
 
 Le logement utilise React Hook Form + Zod. Les nombres sont bornés, la superficie est positive, le type et la présence d’animaux sont obligatoires. La superficie utilise les pi² du contrat `area_sqft` du dossier technique, malgré le libellé m² d’une maquette. Description facultative limitée à 500 caractères. Galerie avec aperçu, suppression et cinq photos maximum ; pas de caméra, car aucun support caméra ne préexistait. Les permissions caméra/micro sont désactivées dans la configuration du plugin.
 
-Le brouillon Zustand survit aux retours et démontages des écrans. Il reste uniquement en mémoire pour la session et est effacé à la déconnexion ou au changement de compte. Rien n’est envoyé. La date/préférences et la confirmation restent hors périmètre.
+Le brouillon Zustand survit aux retours et démontages des écrans. Il reste uniquement en mémoire pour la session et est effacé à la déconnexion ou au changement de compte. Rien n’est envoyé. La date/préférences et le récapitulatif sont maintenant disponibles pour le parcours résidentiel, sans envoi de demande.
 
 ## Fichiers créés
 
@@ -61,8 +61,16 @@ Documentation : ce fichier. Captures : `output/previews/client-home.png` et `log
 
 ## TODO hors périmètre
 
-- Développer date/préférences, confirmation et formulaires non résidentiels lorsque les flux sont spécifiés.
+- Développer les formulaires non résidentiels lorsque les flux sont spécifiés.
 - Connecter les API demandes/réservations et le transfert des photos ; les mocks restent explicites dans le code.
 - Définir si un brouillon doit persister après fermeture de l’application. Aucun stockage durable implicite n’est ajouté.
 
 Documentation consultée : [Expo ImagePicker](https://docs.expo.dev/versions/latest/sdk/imagepicker/) et [React Navigation Bottom Tabs](https://reactnavigation.org/docs/bottom-tab-navigator/).
+
+## Suite SCRUM-16 : date et récapitulatif
+
+Le formulaire date/préférences exige une date réelle, aujourd’hui ou ultérieure selon le calendrier local, et un créneau matin ou après-midi. Les créneaux sont des souhaits, sans disponibilité garantie. Les notes sont facultatives et limitées à 500 caractères. Le brouillon conserve ces champs lors des retours et les efface avec les autres données à la déconnexion ou au changement de compte.
+
+Le récapitulatif présente logement, superficie, animaux, description, nombre de photos, date et préférences. Ses boutons permettent de modifier les étapes précédentes et de revenir à Mes demandes. Les routes refusent un brouillon incomplet. Aucun bouton ne simule un envoi réussi ; aucun backend ni réservation réelle n’est ajouté.
+
+Validation de cette suite : TypeScript réussi, 32 tests réussis (dont huit nouveaux cas de date/créneau), tests d’isolation du brouillon renforcés, exports Expo web/Android/iOS réussis. Ces nouveaux écrans restent à vérifier visuellement dans un navigateur et sur appareil.
