@@ -14,9 +14,12 @@ import type { RequestPreferences } from '../types/request';
 import { preferenceSchema } from '../schemas/preferenceSchema';
 import { residentialDetailsSchema } from '../schemas/requestSchemas';
 import { RequestProgress } from '../components/RequestProgress';
-import { colors, spacing } from '../../../theme/tokens';
+import { spacing } from '../../../theme/tokens';
+
+import { useAppTheme } from '../../../theme/useAppTheme';
 
 export function RequestPreferencesScreen({ navigation }: ClientScreenProps<'RequestNextStep'>) {
+  const { palette } = useAppTheme();
   const draft = useRequestDraftStore();
   const form = useForm<RequestPreferences>({ defaultValues: draft.preferences, resolver: zodResolver(preferenceSchema()), mode: 'onTouched' });
   const ready = draft.category === 'RESIDENTIAL' && residentialDetailsSchema.safeParse(draft.residential).success;
@@ -36,7 +39,7 @@ export function RequestPreferencesScreen({ navigation }: ClientScreenProps<'Requ
         {([{ value: 'MORNING', title: 'Matin', description: 'Entre 8 h et 12 h' }, { value: 'AFTERNOON', title: 'Après-midi', description: 'Entre 12 h et 17 h' }] as const).map(option =>
           <SelectionCard key={option.value} {...option} selected={field.value === option.value} onPress={() => { field.onChange(option.value); field.onBlur(); }} />)}
       </View>
-      {fieldState.error && <AppText accessibilityLiveRegion="polite" style={{ color: colors.danger }}>{fieldState.error.message}</AppText>}
+      {fieldState.error && <AppText accessibilityLiveRegion="polite" style={{ color: palette.danger }}>{fieldState.error.message}</AppText>}
     </View>} />
     <ControlledField control={form.control} name="notes" label="Préférences supplémentaires (facultatif)" placeholder="Ex. : privilégier des produits sans parfum…" multiline maxLength={500} />
     <Button title="Voir le récapitulatif" onPress={() => void form.handleSubmit(values => { draft.updatePreferences(values); navigation.navigate('RequestReview'); })()} />
