@@ -1,0 +1,278 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ================= ENUMS =================
+
+enum Role {
+  CLIENT
+  EMPLOYEE
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  APPLE
+}
+
+enum RequestType {
+  RESIDENTIAL
+  BUSINESS
+}
+
+enum RequestStatus {
+  NEW
+  UNDER_REVIEW
+  AWAITING_CLIENT
+  SCHEDULING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  CLOSED
+}
+
+enum HousingType {
+  APARTMENT
+  HOUSE
+  CONDO
+  OTHER
+}
+
+enum Frequency {
+  ONE_TIME
+  DAILY
+  WEEKLY
+  CUSTOM
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  SUPERSEDED
+}
+
+enum AppointmentStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ================= IDENTITÉ =================
+
+model User {
+  id                 String       @id @default(uuid()) @db.Char(36)
+  email              String       @unique @db.VarChar(255)
+  role               Role         @default(CLIENT)
+  status             UserStatus   @default(ACTIVE)
+  firstName          String       @map("first_name") @db.VarChar(100)
+  lastName           String       @map("last_name") @db.VarChar(100)
+  phone              String?      @db.VarChar(30)
+  passwordHash       String?      @map("password_hash") @db.VarChar(255)
+  authProvider       AuthProvider @default(LOCAL) @map("auth_provider")
+  mustChangePassword Boolean      @default(false) @map("must_change_password")
+  createdAt          DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+
+  addresses       Address[]
+  serviceRequests ServiceRequest[]
+  refreshTokens   RefreshToken[]
+  createdQuotes   Quote[]          @relation("QuoteCreatedBy")
+  confirmedAppointments ServiceAppointment[] @relation("AppointmentConfirmedBy")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Char(36)
+  userId    String    @map("user_id") @db.Char(36)
+  tokenHash String    @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.DateTime(3)
+  revokedAt DateTime? @map("revoked_at") @db.DateTime(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Address {
+  id          String  @id @default(uuid()) @db.Char(36)
+  userId      String  @map("user_id") @db.Char(36)
+  label       String  @db.VarChar(100)
+  line1       String  @db.VarChar(255)
+  line2       String? @db.VarChar(255)
+  city        String  @db.VarChar(100)
+  province    String  @db.VarChar(50)
+  postalCode  String  @map("postal_code") @db.VarChar(10)
+  accessNotes String? @map("access_notes") @db.Text
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests ServiceRequest[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// ================= DEMANDES =================
+
+model ServiceRequest {
+  id          String        @id @default(uuid()) @db.Char(36)
+  clientId    String        @map("client_id") @db.Char(36)
+  addressId   String        @map("address_id") @db.Char(36)
+  requestType RequestType   @map("request_type")
+  description String?       @db.Text
+  status      RequestStatus @default(NEW)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+
+  client             User                  @relation(fields: [clientId], references: [id])
+  address            Address               @relation(fields: [addressId], references: [id])
+  residentialDetails ResidentialDetails?
+  businessDetails    BusinessDetails?
+  availabilities     RequestAvailability[]
+  photos             RequestPhoto[]
+  quotes             Quote[]
+  appointments       ServiceAppointment[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("service_requests")
+}
+
+model ResidentialDetails {
+  requestId    String      @id @map("request_id") @db.Char(36)
+  housingType  HousingType @map("housing_type")
+  bedrooms     Int
+  bathrooms    Int
+  floors       Int         @default(1)
+  areaSqft     Int?        @map("area_sqft")
+  hasPets      Boolean     @default(false) @map("has_pets")
+  specialNotes String?     @map("special_notes") @db.Text
+
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("residential_details")
+}
+
+model BusinessDetails {
+  requestId        String    @id @map("request_id") @db.Char(36)
+  businessType     String    @map("business_type") @db.VarChar(100)
+  companyName      String    @map("company_name") @db.VarChar(150)
+  areaSqft         Int?      @map("area_sqft")
+  areasToClean     Json?     @map("areas_to_clean")
+  scopeDescription String    @map("scope_description") @db.Text
+  frequency        Frequency
+  constraints      String?   @db.Text
+
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("business_details")
+}
+
+model RequestAvailability {
+  id        String   @id @default(uuid()) @db.Char(36)
+  requestId String   @map("request_id") @db.Char(36)
+  startAt   DateTime @map("start_at") @db.DateTime(3)
+  endAt     DateTime @map("end_at") @db.DateTime(3)
+  priority  Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("request_availabilities")
+}
+
+model RequestPhoto {
+  id        String   @id @default(uuid()) @db.Char(36)
+  requestId String   @map("request_id") @db.Char(36)
+  fileKey   String   @map("file_key") @db.VarChar(255)
+  caption   String?  @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("request_photos")
+}
+
+// ================= OFFRES =================
+
+model Quote {
+  id               String      @id @default(uuid()) @db.Char(36)
+  requestId        String      @map("request_id") @db.Char(36)
+  createdByAdminId String      @map("created_by_admin_id") @db.Char(36)
+  version          Int
+  subtotal         Decimal     @db.Decimal(10, 2)
+  taxes            Decimal     @db.Decimal(10, 2)
+  total            Decimal     @db.Decimal(10, 2)
+  estimatedMinutes Int?        @map("estimated_minutes")
+  employeesNeeded  Int         @default(1) @map("employees_needed")
+  status           QuoteStatus @default(DRAFT)
+  expiresAt        DateTime?   @map("expires_at") @db.DateTime(3)
+  sentAt           DateTime?   @map("sent_at") @db.DateTime(3)
+  respondedAt      DateTime?   @map("responded_at") @db.DateTime(3)
+
+  request        ServiceRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdByAdmin User                 @relation("QuoteCreatedBy", fields: [createdByAdminId], references: [id])
+  items          QuoteItem[]
+  appointments   ServiceAppointment[] @relation("AcceptedQuote")
+
+  @@unique([requestId, version])
+  @@index([status])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id          String  @id @default(uuid()) @db.Char(36)
+  quoteId     String  @map("quote_id") @db.Char(36)
+  description String  @db.VarChar(255)
+  qty         Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(10, 2)
+  lineTotal   Decimal @map("line_total") @db.Decimal(10, 2)
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+  @@map("quote_items")
+}
+
+// ================= RÉSERVATIONS =================
+
+model ServiceAppointment {
+  id                 String            @id @default(uuid()) @db.Char(36)
+  requestId          String            @map("request_id") @db.Char(36)
+  acceptedQuoteId    String            @map("accepted_quote_id") @db.Char(36)
+  scheduledStart     DateTime?         @map("scheduled_start") @db.DateTime(3)
+  scheduledEnd       DateTime?         @map("scheduled_end") @db.DateTime(3)
+  status             AppointmentStatus @default(PENDING_CONFIRMATION)
+  clientNotes        String?           @map("client_notes") @db.Text
+  confirmedByAdminId String?           @map("confirmed_by_admin_id") @db.Char(36)
+
+  request          ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  acceptedQuote    Quote          @relation("AcceptedQuote", fields: [acceptedQuoteId], references: [id])
+  confirmedByAdmin User?          @relation("AppointmentConfirmedBy", fields: [confirmedByAdminId], references: [id])
+
+  @@index([requestId])
+  @@index([status])
+  @@index([scheduledStart])
+  @@map("service_appointments")
+}
