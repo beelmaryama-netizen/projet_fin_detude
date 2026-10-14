@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
+import { withUrls } from '../utils/photoUrl.js';
 
 // Transitions autorisées pour l'admin (cycle de vie du dossier de référence)
 // Certaines seront automatiques plus tard (offre envoyée -> AWAITING_CLIENT, etc.)
@@ -89,7 +90,7 @@ export async function getOne(user, id) {
   if (!request || (user.role === 'CLIENT' && request.clientId !== user.id)) {
     throw new AppError(404, 'Demande introuvable');
   }
-  return request;
+  return { ...request, photos: withUrls(request.photos) };
 }
 
 export async function cancelByClient(clientId, id) {

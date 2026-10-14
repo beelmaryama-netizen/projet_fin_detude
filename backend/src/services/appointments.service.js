@@ -1,5 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
+import { findConflicts, cancelForAppointment } from './missions.service.js';
+import { notify } from './notifications.service.js';
 
 // Cycle de vie "Réservation" du dossier (10.1).
 // IN_PROGRESS et COMPLETED sont pilotés par la mission (séquence 7.4), pas par cette API.
@@ -118,7 +120,8 @@ export async function confirm(adminId, id, { scheduledStart, scheduledEnd }) {
     }),
   ]);
 
-  // TODO module notifications : notifier le client "réservation confirmée"
+  // Séquence 7.2 étape 12
+  await notify([updated.request.clientId], 'APPOINTMENT_CONFIRMED', { type: 'APPOINTMENT', id });
   return updated;
 }
 
@@ -130,33 +133,53 @@ export async function reschedule(adminId, id, { scheduledStart, scheduledEnd }) 
     throw new AppError(409, 'Seule une réservation CONFIRMED peut être replanifiée');
   }
 
-  // TODO module missions : vérifier les chevauchements des employés déjà assignés (règle 32)
-  return prisma.serviceAppointment.update({
+  // Règle 32 : les employés déjà assignés doivent être libres sur le nouveau créneau
+  const mission = await prisma.mission.findUnique({
+    where: { appointmentId: id },
+    include: { assignments: { where: { status: 'ACTIVE' } } },
+  });
+  if (mission && mission.assignments.length > 0) {
+    const ids = mission.assignments.map((a) => a.employeeId);
+    const conflicts = await findConflicts(prisma, ids, scheduledStart, scheduledEnd, mission.id);
+    if (conflicts.length > 0) {
+      throw new AppError(409, 'Chevauchement horaire pour un employé assigné', 'SCHEDULE_CONFLICT');
+    }
+  }
+
+  const updated = await prisma.serviceAppointment.update({
     where: { id },
     data: { scheduledStart, scheduledEnd, confirmedByAdminId: adminId },
     include: baseInclude,
   });
+
+  await notify([updated.request.clientId], 'APPOINTMENT_RESCHEDULED', { type: 'APPOINTMENT', id });
+  return updated;
 }
 
-export async function cancel(id) {
+export async function cancel(adminId, id) {
   const appointment = await prisma.serviceAppointment.findUnique({ where: { id } });
   if (!appointment) throw new AppError(404, 'Réservation introuvable');
   if (!CANCELLABLE.includes(appointment.status)) {
     throw new AppError(409, `Impossible d'annuler une réservation ${appointment.status}`);
   }
 
-  const [updated] = await prisma.$transaction([
-    prisma.serviceAppointment.update({
+  let freed = { missionId: null, employeeIds: [] };
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.serviceAppointment.update({
       where: { id },
       data: { status: 'CANCELLED' },
       include: baseInclude,
-    }),
-    prisma.serviceRequest.update({
+    });
+    await tx.serviceRequest.update({
       where: { id: appointment.requestId },
       data: { status: 'CANCELLED' },
-    }),
-  ]);
+    });
+    // La mission interne liée est annulée et les employés libérés
+    freed = await cancelForAppointment(tx, id, adminId);
+    return result;
+  });
 
-  // TODO module notifications : notifier le client
+  await notify([updated.request.clientId], 'APPOINTMENT_CANCELLED', { type: 'APPOINTMENT', id });
+  await notify(freed.employeeIds, 'MISSION_CANCELLED', { type: 'MISSION', id: freed.missionId });
   return updated;
 }

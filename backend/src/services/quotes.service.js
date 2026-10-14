@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { computeQuote } from '../utils/money.js';
+import { notify, notifyAdmins } from './notifications.service.js';
 
 // Statuts de demande où l'admin peut préparer une offre
 const QUOTABLE_REQUEST_STATUSES = ['UNDER_REVIEW', 'AWAITING_CLIENT'];
@@ -161,7 +162,8 @@ export async function send(id, { validDays }) {
     }),
   ]);
 
-  // TODO module notifications : notifier le client "nouvelle offre disponible"
+  // Séquence 7.2 étape 7
+  await notify([request.clientId], 'QUOTE_SENT', { type: 'QUOTE', id });
   return sent;
 }
 
@@ -172,7 +174,7 @@ export async function accept(user, id) {
   if (quote.status === 'EXPIRED') throw new AppError(409, 'Cette offre a expiré');
   if (quote.status !== 'SENT') throw new AppError(409, `Impossible d'accepter une offre ${quote.status}`);
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // Mise à jour conditionnelle : protège contre deux acceptations simultanées
     const { count } = await tx.quote.updateMany({
       where: { id, status: 'SENT' },
@@ -200,10 +202,12 @@ export async function accept(user, id) {
       },
     });
 
-    // TODO module notifications : notifier l'admin
     const updated = await tx.quote.findUnique({ where: { id }, include: itemsInclude });
     return forClient(updated);
   });
+
+  await notifyAdmins('QUOTE_ACCEPTED', { type: 'QUOTE', id });
+  return result;
 }
 
 export async function reject(user, id) {
@@ -223,5 +227,6 @@ export async function reject(user, id) {
     }),
   ]);
 
+  await notifyAdmins('QUOTE_REJECTED', { type: 'QUOTE', id });
   return forClient(updated);
 }

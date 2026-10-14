@@ -8,6 +8,13 @@ export const api = () => request(app);
 // Vide toutes les tables (ordre enfants -> parents à cause des clés étrangères)
 export async function resetDb() {
   await prisma.$transaction([
+    prisma.notification.deleteMany(),
+    prisma.deviceToken.deleteMany(),
+    prisma.missionPhoto.deleteMany(),
+    prisma.missionChecklistItem.deleteMany(),
+    prisma.missionLog.deleteMany(),
+    prisma.missionAssignment.deleteMany(),
+    prisma.mission.deleteMany(),
     prisma.serviceAppointment.deleteMany(),
     prisma.quoteItem.deleteMany(),
     prisma.quote.deleteMany(),
@@ -70,6 +77,34 @@ export async function createRequest(clientId, status = 'NEW') {
       requestType: 'RESIDENTIAL',
       status,
       residentialDetails: { create: { housingType: 'HOUSE', bedrooms: 3, bathrooms: 2 } },
+    },
+  });
+}
+
+// Crée directement un rendez-vous CONFIRMED (demande + offre acceptée) sur un créneau
+export async function createConfirmedAppointment({ start, end }) {
+  const client = await createUser({ role: 'CLIENT' });
+  const admin = await createUser({ role: 'ADMIN' });
+  const request = await createRequest(client.id, 'ACTIVE');
+  const quote = await prisma.quote.create({
+    data: {
+      requestId: request.id,
+      createdByAdminId: admin.id,
+      version: 1,
+      subtotal: '100.00',
+      taxes: '14.98',
+      total: '114.98',
+      status: 'ACCEPTED',
+    },
+  });
+  return prisma.serviceAppointment.create({
+    data: {
+      requestId: request.id,
+      acceptedQuoteId: quote.id,
+      status: 'CONFIRMED',
+      scheduledStart: new Date(start),
+      scheduledEnd: new Date(end),
+      confirmedByAdminId: admin.id,
     },
   });
 }

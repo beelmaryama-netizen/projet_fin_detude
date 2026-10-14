@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node src/server.js",
+    "dev": "nodemon --exec \"node --use-system-ca\" src/server.js",
+    "start": "node --use-system-ca src/server.js",
+    "pretest": "prisma generate",
     "migrate": "prisma migrate dev",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
     "test:db": "dotenv -e .env.test -- prisma migrate deploy"
@@ -17,10 +18,12 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.6",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.1",
+    "firebase-admin": "^14.5.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",

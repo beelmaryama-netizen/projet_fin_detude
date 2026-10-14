@@ -21,5 +21,5 @@ export async function reschedule(req, res) {
 }
 
 export async function cancel(req, res) {
-  res.json(await appointmentsService.cancel(req.params.id));
+  res.json(await appointmentsService.cancel(req.user.id, req.params.id));
 }
