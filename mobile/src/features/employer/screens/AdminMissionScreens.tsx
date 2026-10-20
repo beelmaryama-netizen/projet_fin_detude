@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -202,7 +202,7 @@ export function AdminMissionDetailScreen({ navigation, route }: NativeStackScree
   </AdminWorkspace>;
 }
 
-function MissionCard({ mission, children }: { mission: AdminMission; children?: React.ReactNode }) {
+function MissionCard({ mission, children }: { mission: AdminMission; children?: ReactNode }) {
   return <AdminCard>
     <View style={styles.cardHead}><AdminBadge label={mission.reference} /><AdminBadge label={missionLabels[mission.status]} tone={missionTone(mission.status)} /></View>
     <AppText style={styles.title}>{mission.clientName}</AppText>
@@ -214,7 +214,7 @@ function MissionCard({ mission, children }: { mission: AdminMission; children?: 
   </AdminCard>;
 }
 
-function Detail({ icon, value }: { icon: React.ComponentProps<typeof Ionicons>['name']; value: string }) {
+function Detail({ icon, value }: { icon: ComponentProps<typeof Ionicons>['name']; value: string }) {
   return <View style={styles.detail}><Ionicons name={icon} size={18} color={theme.blue} /><AppText style={styles.detailText}>{value}</AppText></View>;
 }
 
