@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -201,7 +201,7 @@ export function OffersScreen({ navigation }: NativeStackScreenProps<AdminStackPa
   </AdminWorkspace>;
 }
 
-function Detail({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string }) {
+function Detail({ icon, label }: { icon: ComponentProps<typeof Ionicons>['name']; label: string }) {
   return <View style={styles.detail}><Ionicons name={icon} size={19} color={theme.blue} /><AppText style={styles.detailText}>{label}</AppText></View>;
 }
 
