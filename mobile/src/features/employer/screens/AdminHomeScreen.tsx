@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -58,7 +59,7 @@ export function AdminHomeScreen({ navigation }: NativeStackScreenProps<AdminStac
   </AdminWorkspace>;
 }
 
-function Tile({ icon, title, onPress }: { icon: React.ComponentProps<typeof Ionicons>['name']; title: string; onPress: () => void }) {
+function Tile({ icon, title, onPress }: { icon: ComponentProps<typeof Ionicons>['name']; title: string; onPress: () => void }) {
   return <View style={styles.tile}>
     <View style={styles.icon}><Ionicons name={icon} size={24} color={theme.blue} /></View>
     <AppText style={styles.tileTitle}>{title}</AppText>
