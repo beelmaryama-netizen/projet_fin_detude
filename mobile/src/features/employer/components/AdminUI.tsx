@@ -20,14 +20,14 @@ export function AdminSectionTitle({ children, action }: PropsWithChildren<{ acti
 
 export function AdminBadge({ label, tone = 'blue' }: { label: string; tone?: 'blue' | 'green' | 'gold' | 'red' | 'muted' }) {
   const palette = {
-    blue: ['#173E72', theme.blue],
-    green: ['#123D38', theme.success],
-    gold: ['#4B3814', '#FFD36A'],
-    red: ['#4D222B', '#FF8C98'],
-    muted: ['#223A5D', theme.muted],
+    blue: { background: '#173E72', foreground: theme.blue },
+    green: { background: '#123D38', foreground: theme.success },
+    gold: { background: '#4B3814', foreground: '#FFD36A' },
+    red: { background: '#4D222B', foreground: '#FF8C98' },
+    muted: { background: '#223A5D', foreground: theme.muted },
   }[tone];
-  return <View style={[styles.badge, { backgroundColor: palette[0], borderColor: palette[1] + '66' }]}>
-    <AppText style={[styles.badgeText, { color: palette[1] }]}>{label}</AppText>
+  return <View style={[styles.badge, { backgroundColor: palette.background, borderColor: palette.foreground + '66' }]}>
+    <AppText style={[styles.badgeText, { color: palette.foreground }]}>{label}</AppText>
   </View>;
 }
 
