@@ -61,3 +61,7 @@ admin@magicpro.demo
 MagicPro!2026
 MFA : 123456
 ```
+
+## Contrôle continu
+
+La branche inclut `.github/workflows/mobile-check.yml` pour exécuter `npm ci` puis `npm run check` après les prochains pushes sur la branche.
