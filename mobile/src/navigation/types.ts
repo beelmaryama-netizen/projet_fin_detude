@@ -4,6 +4,7 @@ import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigat
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { RequestCategory } from '../features/requests/types/request';
 import type { EmployeeStackParamList } from '../features/employee/types/navigation';
+import type { AdminStackParamList } from '../features/employer/types/admin';
 
 export type AuthStackParamList = {
   Splash: undefined;
@@ -31,7 +32,7 @@ export type ClientStackParamList = {
 };
 export type RootStackParamList = AuthStackParamList & {
   Client: NavigatorScreenParams<ClientStackParamList> | undefined;
-  EmployerDashboard: undefined;
+  Admin: NavigatorScreenParams<AdminStackParamList> | undefined;
   Employee: NavigatorScreenParams<EmployeeStackParamList> | undefined;
 };
 export type ClientScreenProps<T extends keyof ClientStackParamList> = NativeStackScreenProps<ClientStackParamList, T>;
