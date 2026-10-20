@@ -40,24 +40,25 @@ export function AssignEmployeesScreen({ navigation, route }: NativeStackScreenPr
   const [message, setMessage] = useState('');
 
   if (!mission) return <AdminWorkspace title="Mission introuvable" onBack={() => navigation.goBack()}><AdminCard><AppText style={adminStyles.text}>Cette mission n’existe plus.</AppText></AdminCard></AdminWorkspace>;
+  const currentMission = mission;
 
   function employeeHasConflict(employeeId: string) {
-    return missions.some(other => other.id !== mission.id && other.status !== 'CANCELLED' && other.employeeIds.includes(employeeId) &&
-      new Date(mission.startAt).getTime() < new Date(other.endAt).getTime() &&
-      new Date(other.startAt).getTime() < new Date(mission.endAt).getTime());
+    return missions.some(other => other.id !== currentMission.id && other.status !== 'CANCELLED' && other.employeeIds.includes(employeeId) &&
+      new Date(currentMission.startAt).getTime() < new Date(other.endAt).getTime() &&
+      new Date(other.startAt).getTime() < new Date(currentMission.endAt).getTime());
   }
 
   function toggle(id: string) {
     const employee = employees.find(item => item.id === id);
     if (!employee || employee.status !== 'ACTIVE' || employeeHasConflict(id)) return;
     setMessage('');
-    setSelected(current => current.includes(id) ? current.filter(item => item !== id) : current.length < mission.employeeCount ? [...current, id] : current);
+    setSelected(current => current.includes(id) ? current.filter(item => item !== id) : current.length < currentMission.employeeCount ? [...current, id] : current);
   }
 
   function confirm() {
-    const result = assignMission(mission.id, selected);
+    const result = assignMission(currentMission.id, selected);
     if (!result.ok) setMessage(result.message ?? 'Affectation impossible.');
-    else navigation.replace('MissionDetail', { missionId: mission.id });
+    else navigation.replace('MissionDetail', { missionId: currentMission.id });
   }
 
   return <AdminWorkspace title="Assigner un employé" subtitle={'Sélectionnez exactement ' + mission.employeeCount + ' employé(s).'} onBack={() => navigation.goBack()}>
@@ -158,19 +159,20 @@ export function AdminMissionDetailScreen({ navigation, route }: NativeStackScree
   const [endAt, setEndAt] = useState(mission?.endAt ?? '');
   const [message, setMessage] = useState('');
   if (!mission) return <AdminWorkspace title="Mission introuvable" onBack={() => navigation.goBack()}><AdminCard><AppText style={adminStyles.text}>Cette mission n’existe plus.</AppText></AdminCard></AdminWorkspace>;
+  const currentMission = mission;
 
   const assigned = mission.employeeIds.map(id => employees.find(item => item.id === id)).filter(Boolean);
   const locked = mission.status === 'IN_PROGRESS' || mission.status === 'COMPLETED' || mission.status === 'CANCELLED';
 
   function saveSchedule() {
-    const result = updateSchedule(mission.id, startAt, endAt);
+    const result = updateSchedule(currentMission.id, startAt, endAt);
     setMessage(result.ok ? 'Créneau mis à jour.' : result.message ?? 'Modification impossible.');
   }
 
   function confirmCancel() {
     Alert.alert('Annuler la mission', 'Cette action conserve la mission dans l’historique.', [
       { text: 'Retour', style: 'cancel' },
-      { text: 'Annuler la mission', style: 'destructive', onPress: () => cancelMission(mission.id) },
+      { text: 'Annuler la mission', style: 'destructive', onPress: () => cancelMission(currentMission.id) },
     ]);
   }
 
