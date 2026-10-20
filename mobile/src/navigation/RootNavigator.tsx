@@ -10,26 +10,31 @@ import { RegisterScreen } from '../features/auth/screens/RegisterScreen';
 import { ForgotPasswordScreen } from '../features/auth/screens/ForgotPasswordScreen';
 import { VerificationScreen } from '../features/auth/screens/VerificationScreen';
 import { AuthenticatedNotice } from '../features/auth/components/AuthenticatedNotice';
-import { EmployerDashboardScreen } from '../features/employer/screens/EmployerDashboardScreen';
+import { AdminNavigator } from '../features/employer/AdminNavigator';
 import { EmployeeNavigator } from '../features/employee/EmployeeNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: colors.primary, background: colors.background, text: colors.ink, border: colors.border } };
+
 export function RootNavigator() {
   const user = useAuthStore(state => state.session?.user);
   return <NavigationContainer theme={theme}>
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'slide_from_right' }}>
-      {user?.role === 'CLIENT' ? <Stack.Screen name="Client" component={ClientNavigator} navigationKey={`client-${user.id}`} />
-        : user?.role === 'ADMIN' ? <Stack.Screen name="EmployerDashboard" component={EmployerDashboardScreen} navigationKey={`employer-${user.id}`} options={{ title: 'Tableau de bord employeur · MagicPro' }} />
-        : user?.role === 'EMPLOYEE' ? <Stack.Screen name="Employee" component={EmployeeNavigator} navigationKey={`employee-${user.id}`} />
-        : user ? <Stack.Screen name="Login" component={AuthenticatedNotice} navigationKey="authenticated" /> :
-        <Stack.Group navigationKey="public">
-          <Stack.Screen name="Splash" component={SplashScreen} options={{ title: 'Bienvenue · MagicPro' }} />
-          <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Connexion · MagicPro' }} />
-          <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Inscription client · MagicPro' }} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Mot de passe oublié · MagicPro' }} />
-          <Stack.Screen name="Verification" component={VerificationScreen} getId={({ params }) => params.challenge.id} options={{ title: 'Vérification · MagicPro', gestureEnabled: false }} />
-        </Stack.Group>}
+      {user?.role === 'CLIENT'
+        ? <Stack.Screen name="Client" component={ClientNavigator} navigationKey={'client-' + user.id} />
+        : user?.role === 'ADMIN'
+          ? <Stack.Screen name="Admin" component={AdminNavigator} navigationKey={'admin-' + user.id} options={{ title: 'Administration · MagiquePro' }} />
+          : user?.role === 'EMPLOYEE'
+            ? <Stack.Screen name="Employee" component={EmployeeNavigator} navigationKey={'employee-' + user.id} />
+            : user
+              ? <Stack.Screen name="Login" component={AuthenticatedNotice} navigationKey="authenticated" />
+              : <Stack.Group navigationKey="public">
+                  <Stack.Screen name="Splash" component={SplashScreen} options={{ title: 'Bienvenue · MagicPro' }} />
+                  <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Connexion · MagicPro' }} />
+                  <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Inscription client · MagicPro' }} />
+                  <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Mot de passe oublié · MagicPro' }} />
+                  <Stack.Screen name="Verification" component={VerificationScreen} getId={({ params }) => params.challenge.id} options={{ title: 'Vérification · MagicPro', gestureEnabled: false }} />
+                </Stack.Group>}
     </Stack.Navigator>
   </NavigationContainer>;
 }
