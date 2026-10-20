@@ -32,7 +32,7 @@ export function CreateEstimateScreen({ navigation, route }: NativeStackScreenPro
   const saveDraft = useAdminStore(state => state.saveDraft);
   const requestId = route.params?.requestId ?? 'demo-request-001';
   const saved = drafts[requestId];
-  const client = clients[0];
+  const client = clients[0]!;
 
   const [serviceName, setServiceName] = useState(saved?.serviceName ?? 'Grand ménage résidentiel');
   const [address, setAddress] = useState(saved?.address ?? client.address);
