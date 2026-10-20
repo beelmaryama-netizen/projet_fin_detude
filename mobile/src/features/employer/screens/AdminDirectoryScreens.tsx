@@ -116,11 +116,12 @@ export function EmployeeDetailScreen({ navigation, route }: NativeStackScreenPro
   const [city, setCity] = useState(employee?.city ?? '');
   const [availability, setAvailability] = useState(employee?.availability ?? '');
   if (!employee) return <AdminWorkspace title="Employé introuvable" onBack={() => navigation.goBack()}><AdminCard><AppText style={adminStyles.text}>Cet employé n’existe plus.</AppText></AdminCard></AdminWorkspace>;
+  const currentEmployee = employee;
 
   function confirmStatus() {
-    Alert.alert(employee.status === 'ACTIVE' ? 'Suspendre cet employé ?' : 'Réactiver cet employé ?', 'Les missions et l’historique restent conservés.', [
+    Alert.alert(currentEmployee.status === 'ACTIVE' ? 'Suspendre cet employé ?' : 'Réactiver cet employé ?', 'Les missions et l’historique restent conservés.', [
       { text: 'Annuler', style: 'cancel' },
-      { text: employee.status === 'ACTIVE' ? 'Suspendre' : 'Réactiver', style: employee.status === 'ACTIVE' ? 'destructive' : 'default', onPress: () => toggleStatus(employee.id) },
+      { text: currentEmployee.status === 'ACTIVE' ? 'Suspendre' : 'Réactiver', style: currentEmployee.status === 'ACTIVE' ? 'destructive' : 'default', onPress: () => toggleStatus(currentEmployee.id) },
     ]);
   }
 
