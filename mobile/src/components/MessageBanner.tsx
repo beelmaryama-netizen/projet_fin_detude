@@ -1,9 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, radii, spacing } from '../theme/tokens';
+import { radii, spacing, type ThemeColors } from '../theme/tokens';
+import { useAppTheme } from '../theme/ThemeProvider';
 import { AppText } from './AppText';
 
 export function MessageBanner({ message, tone = 'error' }: { message?: string; tone?: 'error' | 'success' | 'info' }) {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   if (!message) return null;
   const tint = tone === 'error' ? colors.danger : tone === 'success' ? colors.success : colors.primary;
   return <View accessibilityLiveRegion="polite" accessibilityRole={tone === 'error' ? 'alert' : undefined}
@@ -12,7 +16,7 @@ export function MessageBanner({ message, tone = 'error' }: { message?: string; t
     <AppText variant="label" style={[styles.text, { color: tint }]}>{message}</AppText>
   </View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   box: { flexDirection: 'row', gap: spacing.sm, borderRadius: radii.control, padding: spacing.md, alignItems: 'flex-start' },
   text: { flex: 1 },
 });

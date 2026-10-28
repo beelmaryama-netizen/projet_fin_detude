@@ -5,9 +5,11 @@ import { ControlledField } from '../../../components/ControlledField';
 import { Button } from '../../../components/Button';
 import { MessageBanner } from '../../../components/MessageBanner';
 import { useForgotPassword } from '../hooks/useAuthFlow';
-import { colors } from '../../../theme/tokens';
+import { useAppTheme } from '../../../theme/ThemeProvider';
 
 export function ForgotPasswordScreen({ navigation }: AuthScreenProps<'ForgotPassword'>) {
+  const { colors } = useAppTheme();
+
   const auth = useForgotPassword();
   return <AuthLayout title="Mot de passe oublié" subtitle="Indiquez votre courriel pour recevoir un code et retrouver l’accès à votre compte." onBack={() => navigation.goBack()}>
     <Ionicons name="key-outline" size={40} color={colors.primary} accessible={false} />

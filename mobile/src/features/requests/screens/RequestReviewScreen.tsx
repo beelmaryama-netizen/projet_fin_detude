@@ -1,40 +1,27 @@
-import { useEffect } from 'react';
 import { AuthLayout } from '../../auth/components/AuthLayout';
-import { AppText } from '../../../components/AppText';
+import { RequestProgress } from '../components/RequestProgress';
+import { RequestSummary } from '../components/RequestSummary';
 import { Button } from '../../../components/Button';
 import { MessageBanner } from '../../../components/MessageBanner';
-import { useRequestDraftStore } from '../../../store/requestDraftStore';
+import { AsyncState } from '../../../components/AsyncState';
+import { useRequestReview } from '../hooks/useRequestReview';
+import { useClientQuery, errorMessage } from '../../client/hooks/useClientData';
+import { addressService } from '../../client/services/clientServices';
 import type { ClientScreenProps } from '../../../navigation/types';
-import { preferenceSchema } from '../schemas/preferenceSchema';
-import { residentialDetailsSchema } from '../schemas/requestSchemas';
-import { RequestProgress } from '../components/RequestProgress';
-
-const propertyNames = { APARTMENT: 'Appartement', CONDO: 'Condo', HOUSE: 'Maison', '': '' };
 export function RequestReviewScreen({ navigation }: ClientScreenProps<'RequestReview'>) {
-  const draft = useRequestDraftStore();
-  const propertyReady = draft.category === 'RESIDENTIAL' && residentialDetailsSchema.safeParse(draft.residential).success;
-  const preferencesReady = preferenceSchema().safeParse(draft.preferences).success;
-  useEffect(() => {
-    if (!propertyReady) navigation.replace('ResidentialPropertyDetailsScreen');
-    else if (!preferencesReady) navigation.replace('RequestNextStep');
-  }, [propertyReady, preferencesReady, navigation]);
-  if (!propertyReady || !preferencesReady) return null;
-  const details = draft.residential;
-  return <AuthLayout title="Récapitulatif de la demande" subtitle="Vérifiez les informations de votre brouillon."
-    progress={<RequestProgress activeStep={4} />} onBack={() => navigation.goBack()}>
-    <MessageBanner tone="info" message="Démonstration : votre demande n’a pas été envoyée. Ce brouillon reste en mémoire jusqu’à la déconnexion ou au rechargement." />
-    <AppText variant="heading">Service résidentiel</AppText>
-    <AppText>{propertyNames[details.propertyType]} · {details.areaSqft} pi²</AppText>
-    <AppText>{details.bedrooms} chambre(s) · {details.bathrooms} salle(s) de bain · {details.floors} étage(s)</AppText>
-    <AppText>Animaux : {details.hasPets ? 'Oui' : 'Non'}</AppText>
-    {details.description ? <AppText>Description : {details.description}</AppText> : null}
-    <AppText>Photos jointes au brouillon : {draft.photos.length}</AppText>
-    <Button title="Modifier le logement" variant="secondary" onPress={() => navigation.navigate('ResidentialPropertyDetailsScreen')} />
-    <AppText variant="heading">Date et préférences</AppText>
-    <AppText>Date souhaitée : {draft.preferences.date}</AppText>
-    <AppText>{draft.preferences.timeSlot === 'MORNING' ? 'Matin, entre 8 h et 12 h' : 'Après-midi, entre 12 h et 17 h'}</AppText>
-    {draft.preferences.notes ? <AppText>{draft.preferences.notes}</AppText> : null}
-    <Button title="Modifier la date et les préférences" variant="secondary" onPress={() => navigation.navigate('RequestNextStep')} />
-    <Button title="Conserver le brouillon et revenir à mes demandes" onPress={() => navigation.popTo('ClientTabs', { screen: 'ClientRequests' })} />
+  const state = useRequestReview(navigation); const addresses = useClientQuery('addresses', addressService.list);
+  const { draft, mutation } = state;
+  const address = addresses.data?.find(item => item.id === draft.schedule.addressId) ?? null;
+  const professional = draft.category !== 'RESIDENTIAL';
+  const missingAddress = !professional && !!draft.schedule.addressId && !address;
+  return <AuthLayout showFormLogo title="Vérifiez votre demande" subtitle="Vérifiez ces informations avant de les transmettre à l’équipe MagicPro." onBack={mutation.isPending ? undefined : () => navigation.goBack()} progress={<RequestProgress professional={professional} activeStep={4} />}>
+    {!state.valid && <MessageBanner message="Votre brouillon est incomplet ou une disponibilité est passée. Modifiez les informations avant l’envoi." />}
+    {professional ? state.details && <RequestSummary details={state.details} photos={draft.photos} schedule={draft.schedule} address={null} /> : <AsyncState query={addresses}>{state.details && <RequestSummary details={state.details} photos={draft.photos} schedule={draft.schedule} address={address} />}</AsyncState>}
+    {missingAddress && !addresses.isPending && <MessageBanner message="L’adresse sélectionnée a été supprimée. Choisissez une autre adresse dans Date et préférences." />}
+    <Button title={professional ? "Modifier l’établissement" : "Modifier les détails du logement"} variant="secondary" disabled={mutation.isPending} onPress={() => professional ? navigation.navigate('BusinessRequest', { step: 0 }) : navigation.navigate('ResidentialPropertyDetailsScreen')} />
+    <Button title={professional ? 'Modifier les pièces jointes' : 'Modifier les photos'} variant="link" disabled={mutation.isPending} onPress={() => professional ? navigation.navigate('BusinessRequest', { step: 5 }) : navigation.navigate('ResidentialPropertyDetailsScreen')} />
+    <Button title="Modifier la disponibilité" variant="secondary" disabled={mutation.isPending} onPress={() => navigation.navigate('ResidentialSchedulePreferences')} />
+    <MessageBanner message={mutation.error ? errorMessage(mutation.error) : undefined} />
+    <Button title="Envoyer ma demande" loading={mutation.isPending} disabled={!state.valid || (!professional && (addresses.isPending || addresses.isError || missingAddress))} onPress={() => void state.submit()} />
   </AuthLayout>;
 }

@@ -22,10 +22,23 @@ export type ClientTabParamList = {
 export type ClientStackParamList = {
   ClientTabs: NavigatorScreenParams<ClientTabParamList> | undefined;
   RequestTypeScreen: undefined;
+  BusinessRequest: { step: 0 | 1 | 2 | 3 | 4 | 5 };
   ResidentialPropertyDetailsScreen: undefined;
   RequestFlowPlaceholder: { category: RequestCategory };
-  RequestNextStep: undefined;
+  ResidentialSchedulePreferences: undefined;
   RequestReview: undefined;
+  RequestSubmitted: { id: string };
+  RequestDetails: { id: string };
+  MyQuotes: undefined;
+  QuoteDetails: { id: string };
+  EditProfile: undefined;
+  Appearance: undefined;
+  MyAddresses: undefined;
+  AddressForm: { id?: string } | undefined;
+  NotificationPreferences: undefined;
+  Security: undefined;
+  Support: undefined;
+  ContactSupport: undefined;
   ReservationDetails: { id: string };
   Notifications: undefined;
 };

@@ -8,9 +8,13 @@ import { Button } from '../../../components/Button';
 import { AppText } from '../../../components/AppText';
 import { MessageBanner } from '../../../components/MessageBanner';
 import { useVerification } from '../hooks/useVerification';
-import { colors, fonts, spacing } from '../../../theme/tokens';
+import { fonts, spacing, type ThemeColors } from '../../../theme/tokens';
+import { useAppTheme } from '../../../theme/ThemeProvider';
 
 export function VerificationScreen({ route }: AuthScreenProps<'Verification'>) {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   const auth = useVerification(route.params.challenge);
   return <AuthLayout title={auth.resetToken ? 'Nouveau mot de passe' : auth.copy.title}
     subtitle={auth.resetToken ? 'Choisissez un nouveau mot de passe pour votre compte.' : auth.copy.subtitle}
@@ -35,7 +39,7 @@ export function VerificationScreen({ route }: AuthScreenProps<'Verification'>) {
     <Button title="Retour à la connexion" variant="link" onPress={auth.restart} disabled={auth.busy} />
   </AuthLayout>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   fields: { gap: spacing.md }, muted: { color: colors.muted }, email: { fontFamily: fonts.medium },
   code: { fontSize: 28, letterSpacing: 8, textAlign: 'center', fontFamily: fonts.bold },
 });

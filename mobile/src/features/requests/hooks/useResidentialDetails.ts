@@ -17,6 +17,6 @@ export function useResidentialDetails(navigation: ClientScreenProps<'Residential
   }, [form, updateResidential]);
   useEffect(() => { if (category !== 'RESIDENTIAL') navigation.replace('RequestTypeScreen'); }, [category, navigation]);
   return { form, ready: category === 'RESIDENTIAL',
-    continueRequest: form.handleSubmit(details => { updateResidential(details); navigation.navigate('RequestNextStep'); }),
+    continueRequest: form.handleSubmit(details => { updateResidential(details); navigation.navigate('ResidentialSchedulePreferences'); }),
   };
 }

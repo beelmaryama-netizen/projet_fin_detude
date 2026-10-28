@@ -9,7 +9,7 @@ import { useRequestType } from '../hooks/useRequestType';
 
 export function RequestTypeScreen({ navigation }: ClientScreenProps<'RequestTypeScreen'>) {
   const request = useRequestType(navigation);
-  return <AuthLayout title="Quel type de service souhaitez-vous ?" subtitle="Choisissez le service qui correspond à votre besoin." step="NOUVELLE DEMANDE · 1 SUR 4" onBack={() => navigation.goBack()}>
+  return <AuthLayout showFormLogo title="Quel type de service souhaitez-vous ?" subtitle="Choisissez le service qui correspond à votre besoin." step="NOUVELLE DEMANDE · 1 SUR 4" onBack={() => navigation.goBack()}>
     <View accessibilityRole="radiogroup" accessibilityLabel="Type de service" style={styles.options}>
       {requestCategories.map(category => <SelectionCard key={category.value} {...category} selected={request.category === category.value} onPress={() => request.selectCategory(category.value)} />)}
     </View>

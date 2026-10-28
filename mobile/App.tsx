@@ -10,9 +10,17 @@ import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
-import { colors } from './src/theme/tokens';
+import { type ThemeColors } from './src/theme/tokens';
+import { useAppTheme } from './src/theme/ThemeProvider';
+import { ThemeProvider } from './src/theme/ThemeProvider';
 
 export default function App() {
+  return <ThemeProvider><ThemedApp /></ThemeProvider>;
+}
+function ThemedApp() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   const [fontsLoaded, fontError] = useFonts({ Poppins_600SemiBold, Poppins_700Bold, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold });
   return <SafeAreaProvider>
     <StatusBar style="light" />
@@ -20,4 +28,4 @@ export default function App() {
       : <QueryClientProvider client={queryClient}><RootNavigator /></QueryClientProvider>}
   </SafeAreaProvider>;
 }
-const styles = StyleSheet.create({ loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryDark } });
+const createStyles = (colors: ThemeColors) => StyleSheet.create({ loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryDark } });

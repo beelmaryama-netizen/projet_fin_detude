@@ -4,10 +4,12 @@ import { Button } from '../../../components/Button';
 import { AppText } from '../../../components/AppText';
 import { MessageBanner } from '../../../components/MessageBanner';
 import { useSession } from '../hooks/useSession';
-import { colors } from '../../../theme/tokens';
+import { useAppTheme } from '../../../theme/ThemeProvider';
 
 /** Completion state only. Role-specific private areas are outside this module. */
 export function AuthenticatedNotice() {
+  const { colors } = useAppTheme();
+
   const { session, signOut, busy, error } = useSession();
   if (!session) return null;
   return <AuthLayout title={`Bonjour, ${session.user.firstName}`} subtitle="Vous êtes connecté à votre compte MagicPro.">

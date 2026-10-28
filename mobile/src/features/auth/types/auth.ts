@@ -1,4 +1,4 @@
-import type { Session } from '../../../types/identity';
+import type { Session, User } from '../../../types/identity';
 
 export interface LoginInput { email: string; password: string }
 // No role in this payload: registration is exclusively for clients.
@@ -32,6 +32,11 @@ export interface AuthService {
   resetPassword(resetToken: string, password: string): Promise<void>;
   socialLogin(provider: SocialProvider): Promise<AuthResult>;
   logout(): Promise<void>;
+  getProfile(userId: string): Promise<User>;
+  updateProfile(userId: string, input: Pick<User, 'firstName' | 'lastName' | 'phone'>): Promise<User>;
+  getSecurity(userId: string): Promise<{ mfaEnabled: boolean; hasPassword: boolean }>;
+  changePassword(userId: string, currentPassword: string, password: string): Promise<void>;
+  setMfa(userId: string, enabled: boolean, currentPassword: string, code: string): Promise<void>;
 }
 
 export class AuthError extends Error {
