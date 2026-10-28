@@ -48,6 +48,11 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
     if (!pending) throw new AuthError('INVALID_CHALLENGE', 'Cette vérification n’est plus disponible. Recommencez votre demande.');
     return pending;
   }
+  const getAccount = (userId: string) => {
+    const account = accounts.get(userId);
+    if (!account) throw new AuthError('ACCOUNT_NOT_FOUND', 'Reconnectez-vous pour continuer.');
+    return account;
+  };
   return {
     async login(input) {
       await pause();
@@ -115,8 +120,29 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
         account = { user: { id: id('user'), email, firstName: 'Marie', lastName: 'Démo', role: 'CLIENT' }, password: '', verified: true, mfa: false };
         accounts.set(account.user.id, account);
       }
+      if (account.mfa) return { kind: 'verification', challenge: issue(account.user.email, 'login', account.user.id) };
       return { kind: 'authenticated', session: sessionFor(account) };
     },
     async logout() { await pause(); },
+    async getProfile(userId) { await pause(); return { ...getAccount(userId).user }; },
+    async updateProfile(userId, input) {
+      await pause(); const account = getAccount(userId);
+      if (!input.firstName.trim() || !input.lastName.trim()) throw new AuthError('INVALID_PROFILE', 'Vérifiez votre prénom et votre nom.');
+      account.user = { ...account.user, firstName: input.firstName.trim(), lastName: input.lastName.trim(), phone: input.phone?.trim() };
+      return { ...account.user };
+    },
+    async getSecurity(userId) { await pause(); const account = getAccount(userId); return { mfaEnabled: account.mfa, hasPassword: !!account.password }; },
+    async changePassword(userId, currentPassword, password) {
+      await pause(); const account = getAccount(userId);
+      if (!account.password || account.password !== currentPassword) throw new AuthError('INVALID_PASSWORD', 'Le mot de passe actuel est incorrect ou ce compte utilise un fournisseur externe.');
+      passwordSchema.parse(password); account.password = password;
+      for (const [key, value] of resets) if (value.accountId === userId) resets.delete(key);
+      for (const [key, value] of challenges) if (value.accountId === userId) challenges.delete(key);
+    },
+    async setMfa(userId, enabled, currentPassword, code) {
+      await pause(); const account = getAccount(userId);
+      if ((account.password && account.password !== currentPassword) || code !== DEMO_CODE) throw new AuthError('INVALID_VERIFICATION', 'Vérifiez le mot de passe et le code de démonstration.');
+      account.mfa = enabled;
+    },
   };
 }

@@ -3,13 +3,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { AuthScreenProps } from '../../../navigation/types';
-import { colors, radii, spacing } from '../../../theme/tokens';
+import { radii, spacing, type ThemeColors } from '../../../theme/tokens';
+import { useAppTheme } from '../../../theme/ThemeProvider';
 import { AppText } from '../../../components/AppText';
 import { Button } from '../../../components/Button';
 import { Brand } from '../../../components/Brand';
 
 export function SplashScreen({ navigation }: AuthScreenProps<'Splash'>) {
-  return <LinearGradient colors={[colors.primaryDark, '#102D56', colors.primary]} style={styles.root}>
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
+  return <LinearGradient colors={[colors.primaryDark, '#102D56', colors.primaryFill]} style={styles.root}>
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.content}>
@@ -31,7 +35,7 @@ export function SplashScreen({ navigation }: AuthScreenProps<'Splash'>) {
     </SafeAreaView>
   </LinearGradient>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   root: { flex: 1 }, scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg },
   content: { width: '100%', maxWidth: 480, alignSelf: 'center', gap: spacing.xl },
   brand: { alignItems: 'center', paddingTop: spacing.md },

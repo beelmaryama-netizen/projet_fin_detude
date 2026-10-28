@@ -4,7 +4,7 @@
     "slug": "magicpro-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#F8F9FA",
     "ios": { "supportsTablet": true },
     "android": { "predictiveBackGestureEnabled": true },

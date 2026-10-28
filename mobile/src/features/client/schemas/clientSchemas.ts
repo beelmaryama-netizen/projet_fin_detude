@@ -1,0 +1,10 @@
+import { z } from 'zod';
+import { passwordSchema, registerSchema } from '../../auth/schemas/authSchemas';
+export const profileSchema = z.object({ firstName: z.string().trim().min(1, 'Indiquez votre prénom.').max(80), lastName: z.string().trim().min(1, 'Indiquez votre nom.').max(80), phone: registerSchema.shape.phone });
+export const addressSchema = z.object({ label: z.enum(['Maison', 'Travail', 'Autre']), street: z.string().trim().min(3, 'Indiquez une adresse.').max(180), unit: z.string().trim().max(30), city: z.string().trim().min(2, 'Indiquez la ville.').max(80), province: z.string().trim().toUpperCase().regex(/^(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT)$/, 'Utilisez le code de province, par exemple QC.'), postalCode: z.string().trim().toUpperCase().regex(/^[A-Z]\d[A-Z] ?\d[A-Z]\d$/, 'Exemple : H2X 1Y4.'), accessNotes: z.string().max(500), isDefault: z.boolean() });
+export const supportSchema = z.object({ subject: z.string().trim().min(3, 'Précisez le sujet.').max(100), message: z.string().trim().min(10, 'Décrivez votre question (10 caractères minimum).').max(2000) });
+export const changePasswordSchema = z.object({ currentPassword: z.string().min(1, 'Saisissez le mot de passe actuel.'), password: passwordSchema, confirmPassword: z.string() }).refine(value => value.password === value.confirmPassword, { message: 'Les mots de passe ne correspondent pas.', path: ['confirmPassword'] });
+export const mfaSchema = z.object({ currentPassword: z.string(), code: z.string().regex(/^\d{6}$/, 'Saisissez les 6 chiffres du code de démonstration.') });
+export const preferencesSchema = z.object({ newQuotes: z.boolean(), bookingConfirmations: z.boolean(), bookingChanges: z.boolean(), reminders: z.boolean() });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type MfaInput = z.infer<typeof mfaSchema>;

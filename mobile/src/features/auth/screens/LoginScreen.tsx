@@ -7,9 +7,13 @@ import { Button } from '../../../components/Button';
 import { AppText } from '../../../components/AppText';
 import { MessageBanner } from '../../../components/MessageBanner';
 import { useLogin } from '../hooks/useAuthFlow';
-import { colors, spacing } from '../../../theme/tokens';
+import { spacing, type ThemeColors } from '../../../theme/tokens';
+import { useAppTheme } from '../../../theme/ThemeProvider';
 
 export function LoginScreen({ navigation, route }: AuthScreenProps<'Login'>) {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   const auth = useLogin(route.params?.email);
   return <AuthLayout title="Connexion" subtitle="Accédez à votre compte pour continuer." onBack={() => navigation.navigate('Splash')}>
     <MessageBanner message={route.params?.notice} tone="success" />
@@ -25,4 +29,4 @@ export function LoginScreen({ navigation, route }: AuthScreenProps<'Login'>) {
       <Button title="S’inscrire" variant="link" onPress={() => navigation.navigate('Register')} disabled={auth.busy} /></View>
   </AuthLayout>;
 }
-const styles = StyleSheet.create({ fields: { gap: spacing.md }, forgot: { alignSelf: 'flex-end', paddingHorizontal: 0 }, center: { textAlign: 'center', color: colors.muted } });
+const createStyles = (colors: ThemeColors) => StyleSheet.create({ fields: { gap: spacing.md }, forgot: { alignSelf: 'flex-end', paddingHorizontal: 0 }, center: { textAlign: 'center', color: colors.muted } });
