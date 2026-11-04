@@ -18,7 +18,7 @@ export interface EmployerRequest {
 
 export const employerStatusLabels: Record<EmployerRequestStatus, string> = {
   new: 'Nouvelle',
-  review: 'À analyser',
+  review: 'En analyse',
   waiting: 'En attente',
   'offer-sent': 'Offre envoyée',
   confirmed: 'Confirmée',

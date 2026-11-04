@@ -13,7 +13,7 @@ export function EmployerDialog({ title, onClose, children }: {
 }) {
   return <Modal visible transparent animationType="slide" onRequestClose={onClose}>
     <SafeAreaView style={styles.overlay}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <LinearGradient colors={['#17345F', '#0D2448']} style={styles.panel} accessibilityViewIsModal onAccessibilityEscape={onClose}>
           <View style={styles.heading}>
             <AppText variant="heading" accessibilityRole="header" style={styles.title}>{title}</AppText>

@@ -16,19 +16,20 @@ const tabs = [
   { value: 'employees', label: 'Employés', icon: 'people' },
 ] as const;
 
-export function EmployerLayout({ children, activeTab, onTabChange, onMenu, onNotifications, notificationCount }: PropsWithChildren<{
+export function EmployerLayout({ children, activeTab, onTabChange, onMenu, onNotifications, notificationCount, navigationKey }: PropsWithChildren<{
   activeTab: EmployerTab;
   onTabChange: (tab: EmployerTab) => void;
   onMenu: () => void;
   onNotifications: () => void;
   notificationCount: number;
+  navigationKey?: string;
 }>) {
   const insets = useSafeAreaInsets();
   const scroll = useRef<ScrollView>(null);
 
   useEffect(() => {
     scroll.current?.scrollTo({ y: 0, animated: false });
-  }, [activeTab]);
+  }, [activeTab, navigationKey]);
 
   return <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
     <StatusBar style="light" />
@@ -54,7 +55,7 @@ export function EmployerLayout({ children, activeTab, onTabChange, onMenu, onNot
       </Pressable>
     </View>
 
-    <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
       {children}
     </ScrollView>
 

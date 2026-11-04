@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,26 +8,17 @@ import { categoryTitle } from '../../requests/data/requestCategories';
 import { formatEmployerDate } from '../services/mockEmployerService';
 import { employerTheme } from '../theme';
 import type { EmployerRequest } from '../types/employer';
-import { getEmployerRequestAction } from './EmployerRequestCard';
+import type { AdminClient } from '../types/admin';
 import { EmployerActionButton } from './EmployerActionButton';
 import { RequestStatusBadge } from './RequestStatusBadge';
 
-const actionNotices = {
-  new: 'Consultez les informations ci-dessous pour analyser la demande. En mode démo, le statut reste inchangé.',
-  review: 'Consultez les informations ci-dessous pour poursuivre l’analyse. En mode démo, le statut reste inchangé.',
-  waiting: 'La préparation des offres sera disponible prochainement. Cette démonstration ne transmet aucune offre au client.',
-  'offer-sent': 'Le détail de l’offre sera disponible prochainement. Aucune offre réelle n’est associée à cette demande de démonstration.',
-  confirmed: 'Cette demande est confirmée dans les données de démonstration.',
-} as const;
-
-export function EmployerRequestDetails({ request, showAction, onClose }: {
-  request: EmployerRequest; showAction: boolean; onClose: () => void;
+export function EmployerRequestDetails({ request, onClose, client, onAnalyze, onEstimate, onOffer, onClient, onMission }: {
+  request: EmployerRequest; onClose: () => void; client?: AdminClient;
+  onAnalyze: () => void; onEstimate: () => void; onOffer?: () => void; onClient?: () => void; onMission?: () => void;
 }) {
-  const [actionVisible, setActionVisible] = useState(showAction);
-  const action = getEmployerRequestAction(request.status);
   return <Modal visible animationType="slide" transparent onRequestClose={onClose}>
     <SafeAreaView style={styles.overlay}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <LinearGradient colors={['#17345F', '#0D2448']} style={styles.dialog} accessibilityViewIsModal onAccessibilityEscape={onClose}>
           <View style={styles.heading}>
             <AppText variant="heading" accessibilityRole="header" style={styles.title}>Détail de la demande</AppText>
@@ -42,6 +32,7 @@ export function EmployerRequestDetails({ request, showAction, onClose }: {
             <AppText variant="heading" style={styles.text}>{request.clientName}</AppText>
             <AppText style={styles.text}>{request.serviceType}</AppText>
             <AppText variant="label" style={styles.muted}>{categoryTitle(request.category)}</AppText>
+            {client && <><AppText style={styles.text}>{client.email}</AppText><AppText style={styles.text}>{client.phone}</AppText></>}
           </View>
           <View style={styles.group}>
             <AppText variant="label" style={styles.text}>Reçue le {formatEmployerDate(request.submittedAt)}</AppText>
@@ -52,11 +43,14 @@ export function EmployerRequestDetails({ request, showAction, onClose }: {
             <AppText variant="label" style={styles.sectionLabel}>Besoin du client</AppText>
             <AppText style={styles.text}>{request.description}</AppText>
           </View>
-          {actionVisible && <View style={styles.notice} accessibilityRole="alert">
-            <Ionicons name="information-circle-outline" size={21} color={employerTheme.blue} accessible={false} />
-            <AppText variant="label" style={styles.noticeText}>{actionNotices[request.status]}</AppText>
-          </View>}
-          {action && !actionVisible && <EmployerActionButton title={action} onPress={() => setActionVisible(true)} icon="arrow-forward" />}
+          <View style={styles.group}><AppText variant="label" style={styles.sectionLabel}>Photos et documents</AppText>
+            <AppText style={styles.muted}>Aucune pièce jointe dans cette demande de démonstration.</AppText>
+          </View>
+          {request.status === 'new' && <EmployerActionButton title="Commencer l’analyse" onPress={onAnalyze} icon="search-outline" />}
+          {request.status !== 'confirmed' && request.status !== 'offer-sent' && <EmployerActionButton title="Créer une estimation" onPress={onEstimate} icon="document-text-outline" />}
+          {onOffer && <EmployerActionButton title="Consulter l’offre" variant="secondary" onPress={onOffer} icon="paper-plane-outline" />}
+          {onMission && <EmployerActionButton title="Consulter la mission" variant="secondary" onPress={onMission} icon="calendar-outline" />}
+          {onClient && <EmployerActionButton title="Voir la fiche client" variant="secondary" onPress={onClient} icon="person-outline" />}
           <EmployerActionButton title="Fermer la demande" variant="secondary" onPress={onClose} />
         </LinearGradient>
       </ScrollView>

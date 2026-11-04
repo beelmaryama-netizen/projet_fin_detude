@@ -1,132 +1,64 @@
-# SCRUM-17 — Créer le tableau de bord de l’employeur
+# SCRUM-17 — Interface de l’administration MagiquePro
 
-**Projet :** MagiquePro  
-**Sprint :** Sprint 2  
-**Assigné à :** Khalid  
-**Statut :** Prêt pour revue
+- **Projet :** MagiquePro
+- **Sprint :** Sprint 2
+- **Assigné à :** Khalid Asseffar
+- **Statut :** Prêt pour revue de l’interface de démonstration
+- **Branche :** `feature/khalid-dashboard-administrateur`
 
 ## User Story
 
-En tant que développeur frontend,
-je veux créer le tableau de bord de l’employeur,
-afin de permettre la consultation et la gestion des demandes des clients MagiquePro.
+En tant qu’administrateur, je veux consulter les demandes, préparer des offres et organiser les missions afin de suivre l’activité de MagiquePro dans une interface mobile cohérente.
 
-## Branche Git
+Le tableau de bord livré le 7 octobre 2026 est complété le 20 octobre par les autres écrans d’administration du catalogue UX. La palette bleu marine, les cartes bleues et turquoise, les polices et le logo existants sont conservés.
 
-`feature/SCRUM-17-dashboard-employeur`
+## Interface disponible
 
-Le tableau de bord prolonge l’application Expo existante de `feature/SCRUM-16-interface-utilisateur`. Le compte de gestion utilise le rôle existant `ADMIN`.
+- Tableau de bord réactif, indicateurs semaine/mois, graphiques et accès aux éléments comptés.
+- Demandes avec recherche, cinq filtres, dossier client, analyse et accès à l’estimation.
+- Estimation chiffrée, brouillon, prévisualisation et suivi des offres avec états explicites.
+- Acceptation client simulée créant une mission à assigner, équipe conforme à l’effectif et contrôle des chevauchements.
+- Toutes les missions, calendrier mensuel, détail, replanification, annulation et historique administratif.
+- Répertoire des employés, création/modification des fiches, suspension/réactivation des affectations et historiques.
+- Répertoire et dossiers clients reliés aux demandes, offres et missions.
+- Catalogue des services modifiable, rapports et paramètres administratifs avec confirmation.
+- Menu donnant accès à chaque section; navigation inférieure, notifications et déconnexion existantes.
 
-## Aperçu
+[Correspondance des écrans 45 à 63, scénarios, règles et limites](ADMINISTRATION-UI.md)
 
-![Tableau de bord employeur](../output/previews/employer-dashboard-dark-web.png)
+![Offres et estimations sur mobile](../output/previews/admin/offers-mobile.png)
 
-[Détail d’une demande](../output/previews/employer-request-dark-web.png)
+![Calendrier administratif sur mobile](../output/previews/admin/calendar-mobile.png)
 
-## Refonte visuelle livrée
+## Périmètre technique
 
-Le tableau de bord reprend la référence fournie : fond bleu marine, cartes en dégradé bleu et turquoise, graphiques en barres, actions rapides et navigation inférieure fixe. Le logo original MagiquePro est conservé. Les données affichées proviennent toujours des six demandes locales de démonstration.
+La fonctionnalité reste dans `src/features/employer/`. Le rôle existant `ADMIN` ouvre `EmployerDashboardScreen`, qui délègue au conteneur `AdminHomeScreen` et à ses modules. Les six demandes de démonstration originales sont conservées; les nouveaux écrans partagent un store local, typé et isolé par session.
 
-- Accueil avec la date courante et quatre indicateurs : Nouvelles demandes, En analyse, Offres envoyées et Missions planifiées.
-- Sélecteur « Cette semaine » / « Ce mois-ci », appliqué aux indicateurs et aux statistiques de l’accueil.
-- Quatre actions rapides : Créer une offre, Gérer les employés, Planifier une mission et Voir les statistiques.
-- Navigation fixe : Tableau de bord, Demandes, Réservations et Employés.
-- Menu avec profil et déconnexion via `useSession`, en conservant les états d’attente et d’erreur.
-- Notifications dérivées des nouvelles demandes : les deux demandes concernées sont consultables; le badge indique 2 avec les données actuelles.
-- Demandes avec cinq filtres, détails défilants, statuts explicites et actions contextuelles.
-- Réservations affichant les demandes confirmées; l’onglet Employés indique clairement que la gestion de l’équipe sera disponible prochainement.
+Les écrans d’authentification de Yosri, le parcours client, les formulaires existants, les composants et tokens partagés, les contrats API et les dépendances ne sont pas modifiés par cette extension. Le rôle EMPLOYEE conserve sa destination existante; les écrans de Meryem ne sont pas développés dans cette livraison.
 
-Les filtres de gestion restent indépendants du sélecteur de période de l’accueil. Toutes, Nouvelles, À traiter, En attente et Confirmées affichent respectivement **6, 2, 3, 2 et 1 demandes**. Les nouvelles demandes font aussi partie de « À traiter »; les offres envoyées font partie de « En attente ». Ces totaux de filtres ne doivent pas être additionnés.
+## Limites
 
-## Règles des indicateurs
+Toutes les mutations concernent uniquement la démonstration en mémoire. Elles sont perdues au rechargement complet ou à la déconnexion. Les offres et réponses clients sont simulées. Aucun courriel ni invitation n’est transmis, aucun accès réel n’est modifié, aucun paiement n’est effectué et aucune API n’est connectée. L’exécution employé et la synchronisation entre rôles restent à intégrer avec le backend.
 
-`employerAnalytics.ts` calcule les indicateurs à partir des demandes reçues en paramètre; aucune valeur, tendance ou barre de graphique n’est inventée.
+## Validation
 
-- La semaine commence le lundi à minuit; le mois commence le premier jour du mois. Les dates de calendrier sont interprétées à midi en heure locale, pour éviter un décalage de jour lié à UTC.
-- Nouvelles demandes, En analyse et Offres envoyées utilisent le statut courant et la date de réception `submittedAt`, du début de la période jusqu’à la fin du jour courant.
-- La date d’envoi de l’offre n’existe pas dans les données actuelles : « Offres envoyées » utilise donc la date de réception de la demande, et ne représente pas un historique des événements d’envoi.
-- Missions planifiées utilise les demandes `confirmed` et leur date souhaitée `preferredDate`, sur toute la semaine ou tout le mois sélectionné, y compris les prestations à venir. Une demande reçue auparavant peut donc être comptée si sa prestation tombe dans la période.
-- La tendance compare le nombre courant à la **période calendaire précédente complète**, et non à une durée écoulée équivalente. Elle est arrondie en pourcentage et reste indisponible (`null`) lorsque la période précédente ne contient aucun élément de cette catégorie.
-- Les graphiques contiennent les nombres réels dans sept jours pour la semaine ou dix segments du mois. Les segments sans demande restent à zéro; l’interface leur réserve seulement une ligne de base visuelle.
-- Cliquer sur un indicateur ouvre exactement les demandes comptées par cet indicateur via `getEmployerMetricRequests()`. L’indicateur Missions planifiées ouvre les réservations filtrées par date de prestation.
+- TypeScript strict et **121 tests réussis**, dont 63 tests du store administratif et 8 tests d’analytique administrative ajoutés aux 50 tests précédents.
+- Parcours Web complet de l’estimation à l’affectation d’une équipe de deux personnes; création/suspension d’employé, dossier client, service et paramètres vérifiés.
+- Sections principales contrôlées à 320 et 390 px, sans débordement horizontal de la page.
+- Détails des contrôles et captures dans [ADMINISTRATION-UI.md](ADMINISTRATION-UI.md).
 
-## Fichiers de la fonctionnalité
+## Lancer
 
 ```text
-src/features/employer/
-  components/
-    DashboardStatCard.tsx
-    EmployerActionButton.tsx
-    EmployerDialog.tsx
-    EmployerLayout.tsx
-    EmployerQuickAction.tsx
-    EmployerRequestCard.tsx
-    EmployerRequestDetails.tsx
-    RequestStatusBadge.tsx
-  hooks/useEmployerDashboard.ts
-  screens/EmployerDashboardScreen.tsx
-  services/employerAnalytics.ts
-  services/employerAnalytics.test.ts
-  services/mockEmployerService.ts
-  services/mockEmployerService.test.ts
-  theme.ts
-  types/employer.ts
-stories/SCRUM-17.md
-```
-
-`EmployerActionButton.tsx`, `EmployerDialog.tsx`, `EmployerQuickAction.tsx`, `theme.ts`, `employerAnalytics.ts` et `employerAnalytics.test.ts` sont ajoutés pour cette refonte. Les autres fichiers employeur existaient dans la première livraison SCRUM-17.
-
-Les seuls fichiers préexistants hors de la fonctionnalité modifiés par la livraison SCRUM-17 restent :
-
-- `src/navigation/RootNavigator.tsx` : branche ADMIN vers `EmployerDashboardScreen`, après le MFA existant.
-- `src/navigation/types.ts` : route privée `EmployerDashboard` sans paramètres.
-
-CLIENT conserve `ClientNavigator`. EMPLOYEE conserve `AuthenticatedNotice`. Aucun rôle EMPLOYER n’est ajouté. Le logo, l’authentification de Yosri, les écrans client, les formulaires de demandes, le store de session, les composants et tokens partagés, les contrats backend, `package.json` et `package-lock.json` sont préservés. La palette marine est locale à `src/features/employer/theme.ts`; aucune dépendance n’est ajoutée.
-
-L’audit SHA-256 des 76 fichiers originaux de l’archive confirme que seuls `RootNavigator.tsx` et `types.ts` de navigation diffèrent. Aucun fichier original ne manque; tous les autres fichiers originaux sont inchangés.
-
-## Limites de la démonstration
-
-`getEmployerRequests()` reste le point d’entrée des six demandes originales; leurs statuts, leurs dates relatives et le comportement de `getEmployerSummary()` et `filterEmployerRequests()` sont conservés. Les catégories réutilisent `RequestCategory` et les libellés existants. Les statuts employeur restent locaux à la démonstration : aucun enum de base de données ni contrat API n’est ajouté.
-
-Créer une offre, Planifier une mission et Gérer les employés ouvrent des informations explicites sur les fonctionnalités à venir. Les actions des demandes ouvrent les détails et les messages de démonstration correspondants. Elles ne modifient aucun statut, ne créent aucune offre ou réservation et ne transmettent rien au client. Il n’y a aucune connexion avec les demandes créées dans le parcours client.
-
-## Lancer et tester
-
-```powershell
-git clone --branch feature/SCRUM-17-dashboard-employeur https://github.com/beelmaryama-netizen/projet_fin_detude.git
-cd projet_fin_detude
 npm install
 npm run check
-npx expo start
+npx expo start --tunnel --go
 ```
 
-Ouvrir avec Expo Go sur Android/iPhone, ou appuyer sur `a` pour un émulateur Android disponible. Pour le Web : `npx expo start --web`.
+Compte de gestion : `admin@magicpro.demo` / `MagicPro!2026`, code de démonstration `123456`.
 
-| Compte | Courriel | Mot de passe | MFA |
-| --- | --- | --- | --- |
-| Gestion / ADMIN | admin@magicpro.demo | MagicPro!2026 | 123456 |
-| Client | client@magicpro.demo | MagicPro!2026 | Pas de MFA pour ce compte |
-| Employé | employee@magicpro.demo | MagicPro!2026 | 123456 |
+La première version marine est publiée dans le commit `d26c6c33c517c17e1b4c090dbd1d2b1f7e25c5e7`. L’extension du 20 octobre est décrite dans les fichiers de cette branche de travail.
 
-1. Commencer → connexion ADMIN → code MFA → accueil employeur bleu marine.
-2. Changer la période semaine/mois; vérifier les valeurs calculées et les statistiques.
-3. Ouvrir chaque indicateur; vérifier que la liste correspond au nombre affiché, puis revenir via la navigation inférieure.
-4. Ouvrir Demandes et vérifier les cinq filtres : 6, 2, 3, 2 et 1 demandes.
-5. Ouvrir un détail et les actions Analyser, Préparer l’offre et Voir l’offre; vérifier les messages de démonstration.
-6. Essayer les quatre actions rapides, les onglets Réservations et Employés, puis le badge de notifications.
-7. Ouvrir le menu et le profil, puis se déconnecter; vérifier le retour au parcours public.
-8. Vérifier les destinations CLIENT et EMPLOYEE existantes.
+## Mise à jour du 4 novembre 2026
 
-## Validation de la refonte marine
-
-- `npm run check` réussi : TypeScript strict et **50 tests**, dont 14 tests d’analytique calendaire, 12 tests du service employeur existant et 24 autres tests du projet.
-- Les tests d’analytique couvrent les débuts de semaine et de mois, les changements d’année, le jour courant avant midi, les dates de prestation à venir, les tendances, les périodes vides, les fuseaux horaires et les sous-ensembles exacts ouverts depuis les indicateurs.
-- Expo Web : sélection du mois, sous-ensembles des indicateurs, cinq filtres de demandes et état vide des offres de la semaine vérifiés. Les quatre actions rapides, les quatre onglets, les notifications avec ouverture du détail et les trois actions contextuelles ont été testés.
-- Expo Web à 320, 390 et 1024 px : aucun débordement horizontal et toutes les cibles tactiles mesurées à au moins 44 px. Les libellés des indicateurs deviennent compacts à 320 px. Les actions rapides passent à deux colonnes sous 350 px ou lorsque `fontScale > 1.2`; les indicateurs passent à une colonne lorsque `fontScale > 1.2`.
-- Expo Web : menu, profil et déconnexion vérifiés; le compte retourne au parcours public, puis peut se reconnecter par le MFA existant. Aucun message d’erreur dans la console Web.
-- Expo Go sur Android : parcours ADMIN/MFA, sous-ensemble exact de deux nouvelles demandes, changement semaine/mois des offres de 0 à 1, quatre onglets, aperçus Créer une offre et Planifier une mission, détail et action Analyser vérifiés.
-- Android : aucun avertissement ou erreur ReactNativeJS, ni erreur AndroidRuntime dans le relevé ciblé. L’icône flottante Tools appartient à Expo Go. Le dernier aperçu natif utilise des graphiques de 32 px et montre les quatre actions rapides. L’émulateur a été arrêté après validation; Metro est resté actif.
-- Les preuves natives de cette refonte sont `output/previews/employer-dashboard-dark-android.png` et `output/previews/employer-request-dark-android.png`; le rapport est `output/android-dark-qa.md`.
-- Le bundle iOS a été téléchargé via le tunnel Expo existant : réponse HTTP 200, 6 424 093 octets. Ce contrôle valide le téléchargement du bundle, pas le chargement sur un iPhone physique.
-- Captures Web enregistrées : `output/previews/employer-dashboard-dark-web.png`, `output/previews/employer-request-dark-web.png` et `output/previews/employer-dashboard-dark-desktop.png`.
+La dernière interface d’administration et ses captures sont intégrées dans `mobile/`, en conservant l’organisation du dépôt avec `backend/`. Le contrôle TypeScript strict et les 121 tests du projet réussissent à nouveau. Les limitations de la démonstration en mémoire décrites ci-dessus restent applicables.
