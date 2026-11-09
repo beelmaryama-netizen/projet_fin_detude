@@ -9,8 +9,8 @@
     "ios": { "supportsTablet": true },
     "android": { "predictiveBackGestureEnabled": true },
     "plugins": ["expo-font", "expo-secure-store", ["expo-image-picker", {
-      "photosPermission": "Autoriser MagicPro à sélectionner les photos du logement.",
-      "cameraPermission": false,
+      "photosPermission": "Autoriser MagicPro à sélectionner les photos du service.",
+      "cameraPermission": "Autoriser MagicPro à prendre des photos avant et après une intervention.",
       "microphonePermission": false
     }]],
     "web": { "name": "MagicPro", "themeColor": "#1565C0" }

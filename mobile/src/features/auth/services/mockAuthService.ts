@@ -27,7 +27,7 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
     ['admin@magicpro.demo', 'ADMIN', true],
   ];
   for (const [email, role, mfa] of seeded) {
-    const user: User = { id: id('user'), firstName: role === 'CLIENT' ? 'Marie' : role === 'EMPLOYEE' ? 'Sarah' : 'Alex', lastName: 'Démo', email, role };
+    const user: User = { id: id('user'), firstName: role === 'CLIENT' ? 'Marie' : role === 'EMPLOYEE' ? 'Sarah' : 'Alex', lastName: 'Démo', email, role, ...(role === 'EMPLOYEE' ? { mustChangePassword: true } : {}) };
     accounts.set(user.id, { user, password: DEMO_PASSWORD, verified: true, mfa });
   }
   const findByEmail = (email: string) => [...accounts.values()].find(a => a.user.email === email);
@@ -135,7 +135,7 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
     async changePassword(userId, currentPassword, password) {
       await pause(); const account = getAccount(userId);
       if (!account.password || account.password !== currentPassword) throw new AuthError('INVALID_PASSWORD', 'Le mot de passe actuel est incorrect ou ce compte utilise un fournisseur externe.');
-      passwordSchema.parse(password); account.password = password;
+      passwordSchema.parse(password); account.password = password; account.user = { ...account.user, mustChangePassword: false };
       for (const [key, value] of resets) if (value.accountId === userId) resets.delete(key);
       for (const [key, value] of challenges) if (value.accountId === userId) challenges.delete(key);
     },
