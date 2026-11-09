@@ -7,6 +7,7 @@ export interface User {
   lastName: string;
   phone?: string;
   role: UserRole;
+  mustChangePassword?: boolean;
 }
 
 export interface Session {

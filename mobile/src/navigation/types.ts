@@ -42,6 +42,6 @@ export type ClientStackParamList = {
   ReservationDetails: { id: string };
   Notifications: undefined;
 };
-export type RootStackParamList = AuthStackParamList & { Client: NavigatorScreenParams<ClientStackParamList> | undefined };
+export type RootStackParamList = AuthStackParamList & { Client: NavigatorScreenParams<ClientStackParamList> | undefined; Employee: NavigatorScreenParams<import('../features/employee/navigation/types').EmployeeStack> | undefined };
 export type ClientScreenProps<T extends keyof ClientStackParamList> = NativeStackScreenProps<ClientStackParamList, T>;
 export type ClientTabScreenProps<T extends keyof ClientTabParamList> = CompositeScreenProps<BottomTabScreenProps<ClientTabParamList, T>, NativeStackScreenProps<ClientStackParamList>>;

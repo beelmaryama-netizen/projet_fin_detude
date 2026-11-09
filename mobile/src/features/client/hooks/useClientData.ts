@@ -9,7 +9,7 @@ export function useClientUser() {
   return user;
 }
 export const clientKey = (id: string) => ['client', id] as const;
-export const errorMessage = (error: unknown) => error instanceof ClientServiceError ? error.message : error instanceof Error && error.name === 'AuthError' ? error.message : 'Impossible de terminer cette action. Réessayez.';
+export const errorMessage = (error: unknown) => error instanceof ClientServiceError ? error.message : error instanceof Error && ['AuthError', 'EmployeeServiceError'].includes(error.name) ? error.message : 'Impossible de terminer cette action. Réessayez.';
 export function useClientQuery<T>(key: string, fetch: (user: User) => Promise<T>) {
   const user = useClientUser();
   return useQuery({ queryKey: [...clientKey(user.id), key], queryFn: () => fetch(user), refetchOnMount: 'always' });
