@@ -24,6 +24,7 @@ export function RequestPhotoPicker() {
         </Pressable>
       </View>)}
     </View>
+    <Button title="Prendre une photo" icon="camera-outline" variant="secondary" disabled={picker.busy || picker.photos.length >= MAX_REQUEST_PHOTOS} onPress={() => void picker.pickPhotos(true)} />
     <MessageBanner tone="info" message={picker.message} />
     <Button title={picker.photos.length >= MAX_REQUEST_PHOTOS ? '5 photos maximum' : 'Ajouter des photos'} icon="images-outline" variant="secondary"
       loading={picker.busy} disabled={picker.photos.length >= MAX_REQUEST_PHOTOS} onPress={() => void picker.pickPhotos()} />

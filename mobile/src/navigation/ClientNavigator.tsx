@@ -7,6 +7,7 @@ import { AppText } from '../components/AppText';
 import { fonts } from '../theme/tokens';
 import { useAppTheme } from '../theme/ThemeProvider';
 import type { ClientStackParamList, ClientTabParamList } from './types';
+import { ResidentialServicesScreen } from '../features/requests/screens/ResidentialServicesScreen';
 import { ClientHomeScreen } from '../features/client/screens/ClientHomeScreen';
 import { MyRequestsScreen } from '../features/client/screens/MyRequestsScreen';
 import { MyReservationsScreen } from '../features/client/screens/MyReservationsScreen';
@@ -56,7 +57,8 @@ export function ClientNavigator() {
   return <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
     <Stack.Screen name="ClientTabs" component={ClientTabs} />
     <Stack.Screen name="RequestTypeScreen" component={RequestTypeScreen} />
-    <Stack.Screen name="ResidentialPropertyDetailsScreen" component={ResidentialPropertyDetailsScreen} />
+    <Stack.Screen name="ResidentialServices" component={ResidentialServicesScreen} />
+      <Stack.Screen name="ResidentialPropertyDetailsScreen" component={ResidentialPropertyDetailsScreen} />
     <Stack.Screen name="BusinessRequest" component={BusinessRequestScreen} />
     <Stack.Screen name="RequestFlowPlaceholder" component={ClientPlaceholderScreen} />
     <Stack.Screen name="ResidentialSchedulePreferences" component={ResidentialSchedulePreferencesScreen} />

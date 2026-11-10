@@ -21,14 +21,15 @@ export function ResidentialSchedulePreferencesScreen({ navigation }: ClientScree
 
   const state = useSchedulePreferences(navigation); const addresses = useClientQuery('addresses', addressService.list);
   if (!state.validDetails) return null;
-  return <AuthLayout showFormLogo title="Date et préférences" subtitle="Proposez vos disponibilités. Notre équipe confirmera le rendez-vous après votre acceptation de l’offre." onBack={() => navigation.goBack()} progress={<RequestProgress professional={state.professional} activeStep={3} />}>
+  return <AuthLayout showFormLogo title="Date et préférences" subtitle="Proposez vos disponibilités. Notre équipe confirmera le rendez-vous après votre acceptation de l’offre." onBack={() => navigation.goBack()} progress={<RequestProgress professional={state.professional} activeStep={state.professional ? 3 : 4} />}>
     {state.availabilityFields.fields.map((field, index) => <Card key={field.id}>
       <AppText variant="heading">Disponibilité {index + 1}</AppText>
       <ControlledField control={state.form.control} name={`availabilities.${index}.date`} label={`Date souhaitée ${index + 1}`} placeholder="AAAA-MM-JJ" maxLength={10} keyboardType="numbers-and-punctuation" hint="À partir de demain. Exemple : 2026-12-15." />
       <Controller control={state.form.control} name={`availabilities.${index}.slot`} render={({ field: slot, fieldState }) => <View style={{ gap: spacing.sm }} accessibilityRole="radiogroup" accessibilityLabel={`Plage horaire ${index + 1}`}>
-        {(['MORNING', 'AFTERNOON', 'EVENING'] as const).map(value => <SelectionCard key={value} title={slotLabels[value]} selected={slot.value === value} onPress={() => { slot.onChange(value); slot.onBlur(); }} />)}
+        {(['MORNING', 'AFTERNOON', 'EVENING', 'CUSTOM'] as const).map(value => <SelectionCard key={value} title={slotLabels[value]} selected={slot.value === value} onPress={() => { slot.onChange(value); slot.onBlur(); }} />)}
         {fieldState.error && <AppText style={{ color: colors.danger }}>{fieldState.error.message}</AppText>}
       </View>} />
+      {state.form.watch(`availabilities.${index}.slot`) === 'CUSTOM' && <><ControlledField control={state.form.control} name={`availabilities.${index}.startTime`} label="Heure de début" placeholder="09:00" maxLength={5} /><ControlledField control={state.form.control} name={`availabilities.${index}.endTime`} label="Heure de fin" placeholder="13:00" maxLength={5} /></>}
       {index > 0 && <Button title="Retirer la deuxième disponibilité" variant="link" onPress={() => state.availabilityFields.remove(index)} />}
     </Card>)}
     <MessageBanner message={state.form.formState.errors.availabilities?.root?.message ?? state.form.formState.errors.availabilities?.message} />

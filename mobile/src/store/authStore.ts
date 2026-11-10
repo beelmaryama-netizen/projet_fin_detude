@@ -7,7 +7,7 @@ interface AuthState {
   setSession: (session: Session) => void;
   clearSession: () => void;
 }
-// Mock accounts and sessions are intentionally volatile, never persisted in AsyncStorage.
+// Session tokens remain in memory; local demo accounts are saved by localWorkspace.
 export const useAuthStore = create<AuthState>(set => ({
   session: null,
   setSession: session => {

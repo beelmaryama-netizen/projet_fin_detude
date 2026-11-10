@@ -1,5 +1,6 @@
+import { FormLogo } from '../../../components/FormLogo';
 import type { PropsWithChildren, ReactNode } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -29,7 +30,7 @@ export function AuthLayout({ children, title, subtitle, onBack, step, progress, 
               {onBack && <Pressable accessibilityRole="button" accessibilityLabel="Retour" onPress={onBack} style={[styles.back, showFormLogo && styles.logoBack]}>
                 <Ionicons name="arrow-back" size={24} color={colors.white} accessible={false} />
               </Pressable>}
-              {showFormLogo && <Image source={require('../../../../assets/magicpro-form-logo.png')} resizeMode="contain" accessibilityLabel="Logo MagicPro" style={styles.formLogo} />}
+              {showFormLogo && <FormLogo />}
             </View>}
             <View style={styles.card}>
               {progress}
@@ -55,7 +56,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg, marginTop: spacing.sm },
   logoHeader: { justifyContent: 'center', minHeight: 108 },
   logoBack: { position: 'absolute', left: 0 },
-  formLogo: { width: 128, height: 108 },
   back: { width: 44, height: 44, borderRadius: radii.control, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF14', borderColor: '#FFFFFF40', borderWidth: 1 },
   card: { padding: spacing.lg, borderRadius: radii.card, gap: spacing.lg, backgroundColor: colors.background, borderWidth: 1, borderColor: '#FFFFFF70' },
   heading: { gap: spacing.sm },

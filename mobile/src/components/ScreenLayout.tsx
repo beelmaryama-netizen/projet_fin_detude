@@ -1,3 +1,4 @@
+import { FormLogo } from './FormLogo';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,8 +8,8 @@ import { AppText } from './AppText';
 import { spacing, type ThemeColors } from '../theme/tokens';
 import { useAppTheme } from '../theme/ThemeProvider';
 
-export function ScreenLayout({ children, title, subtitle, onBack, onNotifications, header, bottomSafeArea = !!onBack, refreshing = false, onRefresh }: PropsWithChildren<{
-  title?: string; subtitle?: string; onBack?: () => void; onNotifications?: () => void; header?: ReactNode; bottomSafeArea?: boolean; refreshing?: boolean; onRefresh?: () => void;
+export function ScreenLayout({ children, title, subtitle, onBack, onNotifications, header, showFormLogo = false, bottomSafeArea = !!onBack, refreshing = false, onRefresh }: PropsWithChildren<{
+  showFormLogo?: boolean; title?: string; subtitle?: string; onBack?: () => void; onNotifications?: () => void; header?: ReactNode; bottomSafeArea?: boolean; refreshing?: boolean; onRefresh?: () => void;
 }>) {
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
@@ -26,6 +27,7 @@ export function ScreenLayout({ children, title, subtitle, onBack, onNotification
               <Ionicons name="notifications-outline" size={24} color={colors.white} accessible={false} />
             </Pressable>}
           </View>}
+          {showFormLogo && <FormLogo />}
           {title && <AppText variant="title" accessibilityRole="header" style={styles.title}>{title}</AppText>}
           {subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
           {header}

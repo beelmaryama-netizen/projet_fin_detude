@@ -6,13 +6,28 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#F8F9FA",
-    "ios": { "supportsTablet": true },
-    "android": { "predictiveBackGestureEnabled": true },
-    "plugins": ["expo-font", "expo-secure-store", ["expo-image-picker", {
-      "photosPermission": "Autoriser MagicPro à sélectionner les photos du service.",
-      "cameraPermission": "Autoriser MagicPro à prendre des photos avant et après une intervention.",
-      "microphonePermission": false
-    }]],
-    "web": { "name": "MagicPro", "themeColor": "#1565C0" }
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "predictiveBackGestureEnabled": true
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autoriser MagicPro à sélectionner les photos du service.",
+          "cameraPermission": "Autoriser MagicPro à prendre des photos avant et après une intervention.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-sharing"
+    ],
+    "web": {
+      "name": "MagicPro",
+      "themeColor": "#1565C0"
+    }
   }
 }

@@ -30,7 +30,7 @@ function AddressForm({ address, done }: { address?: ClientAddress; done: () => v
 }
 export function AddressFormScreen({ navigation, route }: ClientScreenProps<'AddressForm'>) {
   const query = useClientQuery('addresses', addressService.list); const id = route.params?.id; const address = query.data?.find(item => item.id === id);
-  return <ClientLayout title={id ? 'Modifier l’adresse' : 'Ajouter une adresse'} subtitle="Renseignez le lieu du service." onBack={() => navigation.goBack()}>
+  return <ClientLayout showFormLogo title={id ? 'Modifier l’adresse' : 'Ajouter une adresse'} subtitle="Renseignez le lieu du service." onBack={() => navigation.goBack()}>
     <AsyncState query={query}>{id && !address ? <EmptyState title="Adresse indisponible" description="Cette adresse a peut-être été supprimée." /> : <AddressForm address={address} done={() => navigation.goBack()} />}</AsyncState>
   </ClientLayout>;
 }

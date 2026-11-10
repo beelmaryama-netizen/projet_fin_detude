@@ -20,14 +20,14 @@ src/navigation/EmployeeNavigator.tsx : navigation réservée au rôle EMPLOYEE.
 ScreenLayout est extrait du ClientLayout existant ; ce dernier le réexporte pour préserver les écrans clients. Boutons, cartes, champs, états asynchrones, dialogues et thème clair/sombre sont réutilisés.
 
 ## Limites et raccordement API
-- Service en mémoire uniquement : missions, photos, rapports, préférences et messages simulés disparaissent au redémarrage. Les brouillons sont effacés à la déconnexion ou au changement de compte.
-- Aucun envoi de message, notification push ou transfert de photo réel.
+- Espace local partagé avec le client et l’administration, sauvegardé sur cet appareil. Les brouillons sont conservés séparément par compte ; une nouvelle connexion est nécessaire au redémarrage.
+- Messages locaux consultables par l’administration ; aucun envoi externe, notification push ou transfert de photo vers un serveur.
 - Le backend actuel accepte les photos seulement en IN_PROGRESS. L'adaptateur futur doit démarrer puis transférer les photos avant préparées localement, avec reprise sur erreur.
-- Le catalogue évoque les photos obligatoires selon la mission ; aucun indicateur contractuel n'est disponible actuellement. Les photos restent facultatives.
+- L’administration peut exiger une photo avant et/ou après dans l’offre. Le service local bloque alors le démarrage ou la clôture tant que la photo manque.
 - Le contrat backend du rapport doit définir le champ incident séparé ou sa sérialisation dans la note (limite serveur à respecter).
 - Photos et coordonnées client à exposer selon les autorisations du futur DTO ; aucune donnée sensible inventée.
 - Disponibilités : agenda consultable, aucune édition en l'absence de règle métier validée.
-- Brancher JWT, contrôle d'affectation serveur, stockage sécurisé des photos et persistance/offline dans une étape backend dédiée.
+- Brancher JWT, contrôles serveur, stockage distant des photos et synchronisation entre appareils dans une étape backend dédiée. La sauvegarde locale existe déjà.
 - Valider sur appareils Android/iOS : caméra, autorisations refusées, clavier, retour arrière et accessibilité. La permission caméra modifiée nécessite une nouvelle compilation native hors Expo Go.
 
 ## Vérification manuelle

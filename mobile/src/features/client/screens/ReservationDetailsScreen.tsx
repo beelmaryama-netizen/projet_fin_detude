@@ -19,12 +19,12 @@ export function ReservationDetailsScreen({ navigation, route }: ClientScreenProp
   return <ClientLayout title="Ma réservation" subtitle="Les détails de votre rendez-vous." onBack={() => navigation.goBack()} onRefresh={() => void query.refetch()} refreshing={query.isRefetching}>
     <AsyncState query={query}>{reservation && <>
       {reservation.status === 'PENDING' && <MessageBanner tone="info" message="Votre offre est acceptée. L’équipe MagicPro doit encore confirmer le rendez-vous." />}
-      <ReservationCard reservation={reservation} />
+      <ReservationCard reservation={reservation} /><Card><AppText variant="heading">Équipe et suivi</AppText><AppText>{reservation.team?.join(', ') || 'Équipe à assigner'}</AppText>{reservation.completedAt && <AppText>Service terminé le {new Date(reservation.completedAt).toLocaleString('fr-CA')}</AppText>}{reservation.report && <AppText>{reservation.report}</AppText>}</Card>
       <Card><AppText variant="label">Référence : {reservation.id}</AppText><AppText variant="heading">Résumé du service</AppText><AppText>{reservation.summary || reservation.serviceTitle}</AppText><AppText variant="heading">Vos instructions</AppText><AppText>{reservation.instructions || 'Aucune instruction particulière.'}</AppText></Card>
       <Button title="Voir l’offre liée" variant="secondary" onPress={() => navigation.navigate('QuoteDetails', { id: reservation.quoteId })} />
       <Button title="Voir ma demande" variant="secondary" onPress={() => navigation.navigate('RequestDetails', { id: reservation.requestId })} />
       {['PENDING', 'CONFIRMED'].includes(reservation.status) && <><AppText variant="caption">Règle de démonstration : annulation possible jusqu’à 24 heures avant le début prévu. La politique définitive reste à confirmer.</AppText>{canCancelReservation(reservation) ? <Button title="Annuler la réservation" variant="secondary" onPress={() => { cancel.reset(); setConfirm(true); }} /> : <MessageBanner tone="info" message="L’annulation dans l’application n’est plus disponible. Contactez le support." />}</>}
-      <Button title="Contacter le support" variant="link" onPress={() => navigation.navigate('Support')} />
+      <Button title="Contacter le support" variant="link" onPress={() => navigation.navigate('ContactSupport', { requestId: reservation.requestId, reservationId: reservation.id })} />
     </>}</AsyncState>
     <ConfirmModal visible={confirm} title="Annuler ce rendez-vous ?" message="Cette annulation sera enregistrée dans votre dossier. La réservation restera consultable dans les réservations annulées." confirmLabel="Confirmer l’annulation" busy={cancel.isPending} error={cancel.error ? errorMessage(cancel.error) : undefined} onCancel={() => setConfirm(false)} onConfirm={() => { if (!cancel.isPending) cancel.mutate(); }} />
   </ClientLayout>;
