@@ -11,6 +11,7 @@ export const residentialDetailsSchema = z.object({
     .refine(value => Number(value.replace(',', '.')) > 0 && Number(value.replace(',', '.')) <= 1_000_000,
       'La superficie doit être comprise entre 0 et 1 000 000 pi² (0 exclu).'),
   hasPets: z.boolean().nullable().refine(value => value !== null, 'Indiquez si des animaux sont présents.'),
+  services: z.array(z.string().min(1).max(100)).max(20).optional(), parking: z.string().max(500).optional(),
   description: z.string().max(MAX_DESCRIPTION_LENGTH, 'La description est limitée à 500 caractères.'),
 });
 export const requestPhotosSchema = z.array(z.object({ id: z.string().min(1), uri: z.string().min(1), name: z.string() })).max(MAX_REQUEST_PHOTOS);

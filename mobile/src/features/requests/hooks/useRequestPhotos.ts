@@ -1,3 +1,4 @@
+import { keepLocalFile } from '../../../services/durableFiles';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,9 +10,10 @@ export function useRequestPhotos() {
   const removePhoto = useRequestDraftStore(state => state.removePhoto);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
-  const acceptResult = useCallback((result: ImagePicker.ImagePickerResult, ownerId: string | null) => {
+  const acceptResult = useCallback(async (result: ImagePicker.ImagePickerResult, ownerId: string | null) => {
     if (result.canceled || ownerId !== useRequestDraftStore.getState().ownerId) return;
-    const candidates = result.assets.map((asset, index) => ({ id: `${Date.now()}-${index}-${asset.assetId ?? asset.uri}`, uri: asset.uri, name: asset.fileName ?? `Photo ${index + 1}` }));
+    const candidates = await Promise.all(result.assets.map(async (asset, index) => ({ id: `${Date.now()}-${index}-${asset.assetId ?? asset.uri}`, uri: await keepLocalFile(asset.uri, asset.fileName ?? 'photo.jpg'), name: asset.fileName ?? `Photo ${index + 1}` })));
+    if (ownerId !== useRequestDraftStore.getState().ownerId) return;
     const added = useRequestDraftStore.getState().addPhotos(candidates);
     setMessage(added < candidates.length ? 'Certaines photos n’ont pas été ajoutées : maximum 5 photos, sans doublons.' : undefined);
   }, []);
@@ -26,16 +28,17 @@ export function useRequestPhotos() {
     }).catch(() => { if (active) setMessage('Impossible de récupérer les photos. Veuillez réessayer.'); });
     return () => { active = false; };
   }, [acceptResult]);
-  const pickPhotos = async () => {
+  const pickPhotos = async (camera = false) => {
     const draft = useRequestDraftStore.getState();
     if (draft.photos.length >= MAX_REQUEST_PHOTOS || busy) return;
     setMessage(undefined);
     // On web, a dismissed picker does not always resolve. Do not leave the UI locked.
     setBusy(Platform.OS !== 'web');
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true,
+      if (camera && !(await ImagePicker.requestCameraPermissionsAsync()).granted) { setMessage('Autorisez la caméra dans les réglages de l’appareil.'); return; }
+      const result = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, exif: false }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true,
         selectionLimit: MAX_REQUEST_PHOTOS - draft.photos.length, quality: 0.8, exif: false, base64: false });
-      acceptResult(result, draft.ownerId);
+      await acceptResult(result, draft.ownerId);
     } catch {
       setMessage('Impossible d’ouvrir la galerie. Vérifiez les autorisations de photos et réessayez.');
     } finally { setBusy(false); }

@@ -1,0 +1,26 @@
+import { it, expect } from 'vitest';
+import { createMockAuthService } from './mockAuthService';
+it('provisions employee access, persists it, changes temporary password and blocks suspension', async () => {
+ const api = createMockAuthService({ latency: 0 });
+ const login = await api.login({ email: 'admin@magicpro.demo', password: 'MagicPro!2026' });
+ if (login.kind !== 'verification') throw Error('MFA expected');
+ const verified = await api.verifyCode(login.challenge.id, '123456');
+ if (verified.kind !== 'authenticated') throw Error('Session expected');
+ const user = { id: 'new-employee', email: 'new@example.com', firstName: 'Nouveau', lastName: 'Employé', role: 'EMPLOYEE' as const };
+ await api.provisionEmployee(verified.session.user, user, 'Temporaire!2026');
+ const restored = createMockAuthService({ latency: 0 }); restored.restore(await api.snapshot());
+ const auth = await restored.login({ email: user.email, password: 'Temporaire!2026' });
+ if (auth.kind !== 'verification') throw Error('MFA expected');
+ const session = await restored.verifyCode(auth.challenge.id, '123456');
+ if (session.kind !== 'authenticated') throw Error('Session expected');
+ expect(session.session.user.mustChangePassword).toBe(true);
+ await restored.changePassword(user.id, 'Temporaire!2026', 'Personnel!2026');
+ expect((await restored.getProfile(user.id)).mustChangePassword).toBe(false);
+ restored.updateEmployeeAccount(verified.session.user, user.email, { ...user, email: 'updated@example.com' });
+ await expect(restored.login({ email: user.email, password: 'Personnel!2026' })).rejects.toThrow();
+ expect((await restored.login({ email: 'updated@example.com', password: 'Personnel!2026' })).kind).toBe('verification');
+ expect(() => restored.updateEmployeeAccount(verified.session.user, 'updated@example.com', { ...user, email: 'admin@magicpro.demo' })).toThrow();
+ restored.configureAccess(candidate => candidate.id !== user.id);
+ await expect(restored.login({ email: 'updated@example.com', password: 'Personnel!2026' })).rejects.toThrow('suspendu');
+ await expect(api.provisionEmployee(user, { ...user, id: 'other' }, 'Temporaire!2026')).rejects.toThrow();
+});

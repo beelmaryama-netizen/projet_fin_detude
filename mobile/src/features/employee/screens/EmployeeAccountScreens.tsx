@@ -1,3 +1,5 @@
+import { useAdminStore } from '../../employer/store/adminStore';
+import { SupportHistory } from '../../../components/SupportHistory';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -22,7 +24,9 @@ import type { EmployeeScreenProps, EmployeeTabProps } from '../navigation/types'
 function updateSession(user: User) { const state = useAuthStore.getState(); if (state.session?.user.id === user.id) state.setSession({ ...state.session, user }); }
 export function EmployeeProfileScreen({ navigation }: EmployeeTabProps<'EmployeeProfile'>) {
  const user = useEmployeeUser(); const session = useSession();
+ const availability = useAdminStore(s => s.employees.find(e => e.email === user.email)?.workingHours);
  return <ScreenLayout title="Mon profil"><Card><AppText variant="heading">{user.firstName} {user.lastName}</AppText><AppText>{user.email}</AppText><AppText>Employé</AppText></Card>
+ <Card><AppText variant="heading">Mes disponibilités</AppText><AppText>{availability ? availability.days.map(day => ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][day]).join(', ') + ' · ' + availability.start + ' – ' + availability.end : 'À confirmer avec l’administration'}</AppText><AppText>Contactez l’administration pour modifier vos horaires.</AppText></Card>
  <Button title="Mes informations" variant="secondary" onPress={() => navigation.navigate('EmployeeProfileEdit')} />
  <Button title="Mon agenda" variant="secondary" onPress={() => navigation.navigate('EmployeeAgenda')} />
  <Button title="Apparence" variant="secondary" onPress={() => navigation.navigate('EmployeeAppearance')} />
@@ -36,13 +40,13 @@ export function EmployeeProfileEditScreen({ navigation }: EmployeeScreenProps<'E
  const user = useEmployeeUser();
  const form = useForm<z.infer<typeof employeeProfileSchema>>({ resolver: zodResolver(employeeProfileSchema), defaultValues: { firstName: user.firstName, lastName: user.lastName, phone: user.phone ?? '' } });
  const save = useEmployeeMutation((account, value: z.infer<typeof employeeProfileSchema>) => authService.updateProfile(account.id, value), updated => { updateSession(updated); navigation.goBack(); });
- return <ScreenLayout title="Mes informations" onBack={() => navigation.goBack()}><ControlledField control={form.control} name="firstName" label="Prénom" autoComplete="given-name" /><ControlledField control={form.control} name="lastName" label="Nom" autoComplete="family-name" /><ControlledField control={form.control} name="phone" label="Téléphone" keyboardType="phone-pad" /><MessageBanner message={save.error ? employeeError(save.error) : undefined} /><Button title="Enregistrer" loading={save.isPending} onPress={form.handleSubmit(value => save.mutate(value))} /></ScreenLayout>;
+ return <ScreenLayout showFormLogo title="Mes informations" onBack={() => navigation.goBack()}><ControlledField control={form.control} name="firstName" label="Prénom" autoComplete="given-name" /><ControlledField control={form.control} name="lastName" label="Nom" autoComplete="family-name" /><ControlledField control={form.control} name="phone" label="Téléphone" keyboardType="phone-pad" /><MessageBanner message={save.error ? employeeError(save.error) : undefined} /><Button title="Enregistrer" loading={save.isPending} onPress={form.handleSubmit(value => save.mutate(value))} /></ScreenLayout>;
 }
 export function EmployeePasswordScreen({ navigation }: EmployeeScreenProps<'EmployeePassword'>) {
  const user = useEmployeeUser(); const session = useSession();
  const form = useForm<z.infer<typeof employeePasswordSchema>>({ resolver: zodResolver(employeePasswordSchema), defaultValues: { currentPassword: '', password: '', confirmPassword: '' } });
  const save = useEmployeeMutation(async (account, value: z.infer<typeof employeePasswordSchema>) => { await authService.changePassword(account.id, value.currentPassword, value.password); return authService.getProfile(account.id); }, updated => { updateSession(updated); if (!user.mustChangePassword) navigation.goBack(); });
- return <ScreenLayout bottomSafeArea title={user.mustChangePassword ? 'Bienvenue dans votre espace' : 'Mot de passe'} subtitle={user.mustChangePassword ? 'Remplacez votre mot de passe temporaire avant de continuer.' : 'Choisissez un mot de passe personnel.'} onBack={user.mustChangePassword ? undefined : () => navigation.goBack()}>
+ return <ScreenLayout showFormLogo bottomSafeArea title={user.mustChangePassword ? 'Bienvenue dans votre espace' : 'Mot de passe'} subtitle={user.mustChangePassword ? 'Remplacez votre mot de passe temporaire avant de continuer.' : 'Choisissez un mot de passe personnel.'} onBack={user.mustChangePassword ? undefined : () => navigation.goBack()}>
  <ControlledField control={form.control} name="currentPassword" label="Mot de passe actuel" secureTextEntry autoComplete="current-password" />
  <ControlledField control={form.control} name="password" label="Nouveau mot de passe" secureTextEntry autoComplete="new-password" />
  <AppText>Au moins 12 caractères, avec majuscule, minuscule, chiffre et symbole.</AppText>
@@ -63,5 +67,5 @@ export function EmployeeHelpScreen({ navigation, route }: EmployeeScreenProps<'E
  const [reference, setReference] = useState<string>();
  const form = useForm<z.infer<typeof contactSchema>>({ resolver: zodResolver(contactSchema), defaultValues: { message: '', missionId: route.params?.missionId } });
  const send = useEmployeeMutation(employeeService.contact, result => { setReference(result); form.reset(); });
- return <ScreenLayout title="Contacter l’administration" subtitle="Décrivez votre question ou un problème lié à votre intervention." onBack={() => navigation.goBack()}><AppText>Mode démonstration : aucun message réel ne sera envoyé.</AppText>{reference && <Card><AppText>Demande simulée : {reference}</AppText></Card>}<ControlledField control={form.control} name="message" label="Votre message" multiline maxLength={2000} /><MessageBanner message={send.error ? employeeError(send.error) : undefined} /><Button title="Simuler l’envoi" loading={send.isPending} onPress={form.handleSubmit(value => send.mutate(value))} /></ScreenLayout>;
+ return <ScreenLayout showFormLogo title="Contacter l’administration" subtitle="Décrivez votre question ou un problème lié à votre intervention." onBack={() => navigation.goBack()}><AppText>Mode démonstration : aucun message réel ne sera envoyé.</AppText>{reference && <Card><AppText>Demande simulée : {reference}</AppText></Card>}<ControlledField control={form.control} name="message" label="Votre message" multiline maxLength={2000} /><MessageBanner message={send.error ? employeeError(send.error) : undefined} /><Button title="Simuler l’envoi" loading={send.isPending} onPress={form.handleSubmit(value => send.mutate(value))} /><SupportHistory /></ScreenLayout>;
 }

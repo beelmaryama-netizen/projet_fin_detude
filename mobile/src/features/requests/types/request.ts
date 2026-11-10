@@ -9,10 +9,12 @@ export interface ResidentialDetails {
   areaSqft: string;
   hasPets: boolean | null;
   description: string;
+  services?: string[];
+  parking?: string;
 }
 export interface RequestPhoto { id: string; uri: string; name: string }
-export type TimeSlot = 'MORNING' | 'AFTERNOON' | 'EVENING';
-export interface Availability { date: string; slot: TimeSlot | '' }
+export type TimeSlot = 'MORNING' | 'AFTERNOON' | 'EVENING' | 'CUSTOM';
+export interface Availability { date: string; slot: TimeSlot | ''; startTime?: string; endTime?: string }
 export interface SchedulePreferences {
   availabilities: Availability[];
   instructions: string;

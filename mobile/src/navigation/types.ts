@@ -24,6 +24,7 @@ export type ClientStackParamList = {
   RequestTypeScreen: undefined;
   BusinessRequest: { step: 0 | 1 | 2 | 3 | 4 | 5 };
   ResidentialPropertyDetailsScreen: undefined;
+  ResidentialServices: undefined;
   RequestFlowPlaceholder: { category: RequestCategory };
   ResidentialSchedulePreferences: undefined;
   RequestReview: undefined;
@@ -38,10 +39,10 @@ export type ClientStackParamList = {
   NotificationPreferences: undefined;
   Security: undefined;
   Support: undefined;
-  ContactSupport: undefined;
+  ContactSupport: { requestId?: string; quoteId?: string; reservationId?: string } | undefined;
   ReservationDetails: { id: string };
   Notifications: undefined;
 };
-export type RootStackParamList = AuthStackParamList & { Client: NavigatorScreenParams<ClientStackParamList> | undefined; Employee: NavigatorScreenParams<import('../features/employee/navigation/types').EmployeeStack> | undefined };
+export type RootStackParamList = AuthStackParamList & { EmployerDashboard: undefined; Client: NavigatorScreenParams<ClientStackParamList> | undefined; Employee: NavigatorScreenParams<import('../features/employee/navigation/types').EmployeeStack> | undefined };
 export type ClientScreenProps<T extends keyof ClientStackParamList> = NativeStackScreenProps<ClientStackParamList, T>;
 export type ClientTabScreenProps<T extends keyof ClientTabParamList> = CompositeScreenProps<BottomTabScreenProps<ClientTabParamList, T>, NativeStackScreenProps<ClientStackParamList>>;

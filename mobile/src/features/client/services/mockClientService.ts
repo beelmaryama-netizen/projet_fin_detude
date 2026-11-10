@@ -1,6 +1,6 @@
 import { categoryTitle } from '../../requests/data/requestCategories';
 import type { User } from '../../../types/identity';
-import type { ClientServices, ClientNotification } from '../types/client';
+import type { ClientServices, ClientNotification, ClientRequest } from '../types/client';
 import { ClientServiceError } from '../types/client';
 import { createClientFixtures, type ClientDatabase } from './clientFixtures';
 import { addressSchema, preferencesSchema, supportSchema } from '../schemas/clientSchemas';
@@ -9,7 +9,12 @@ import { canCancelReservation, effectiveQuoteStatus } from './clientFormatters';
 interface Options { latency?: number; now?: () => number; fail?: () => 'NETWORK' | 'SERVER' | undefined }
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 /** In-memory per-account simulator. No HTTP requests. */
-export function createMockClientServices(options: Options = {}): ClientServices {
+export interface ClientBridge {
+ sync: (user: User, db: ClientDatabase) => void; created: (user: User, request: ClientRequest) => void;
+ decision: (user: User, quoteId: string, decision: 'accepted' | 'refused') => void; cancel: (user: User, quoteId: string) => void;
+}
+export function createMockClientServices(options: Options = {}): ClientServices & { snapshot: () => Record<string, ClientDatabase>; restore: (value: Record<string, ClientDatabase>) => void; connect: (value: ClientBridge) => void } {
+  let bridge: ClientBridge | undefined;
   const databases = new Map<string, ClientDatabase>();
   const now = options.now ?? Date.now;
   let sequence = 0;
@@ -21,6 +26,7 @@ export function createMockClientServices(options: Options = {}): ClientServices 
     if (user.role !== 'CLIENT') throw new ClientServiceError('NOT_FOUND', 'Cet espace est réservé aux clients.');
     let db = databases.get(user.id);
     if (!db) { db = createClientFixtures(user.email.endsWith('@magicpro.demo'), now()); databases.set(user.id, db); }
+    bridge?.sync(user, db);
     for (const quote of db.quotes) {
       if (quote.status === 'PENDING' && effectiveQuoteStatus(quote, now()) === 'EXPIRED') {
         quote.status = 'EXPIRED';
@@ -37,6 +43,8 @@ export function createMockClientServices(options: Options = {}): ClientServices 
   }
   const notify = (db: ClientDatabase, title: string, text: string, target: ClientNotification['target']) => db.notifications.unshift({ id: id('NOT'), title, text, target, read: false, createdAt: new Date(now()).toISOString() });
   return {
+    snapshot: () => copy(Object.fromEntries(databases)), restore: value => { databases.clear(); for (const [id, db] of Object.entries(value)) databases.set(id, db); },
+    connect: value => { bridge = value; },
     requests: {
       list: async user => copy((await database(user)).requests), get: async (user, key) => copy(find((await database(user)).requests, key)),
       create: async (user, input) => {
@@ -49,7 +57,7 @@ export function createMockClientServices(options: Options = {}): ClientServices 
         const request = { id: id('DEM'), ...copy(parsed.data), serviceTitle: `Entretien · ${categoryTitle(parsed.data.category)}`, status: 'NEW' as const, createdAt: at, photos: copy(input.photos), schedule: copy(parsed.data.schedule), address: copy(address), history: [{ at, label: 'Demande reçue' }] };
         db.requests.unshift(request); db.submissions[input.submissionKey] = request.id;
         notify(db, 'Demande reçue', 'Votre demande sera analysée par l’équipe MagicPro.', { kind: 'request', id: request.id });
-        return copy(request);
+        bridge?.created(user, request); return copy(request);
       },
     },
     quotes: {
@@ -60,6 +68,7 @@ export function createMockClientServices(options: Options = {}): ClientServices 
         if (quote.status !== 'PENDING' || Date.parse(quote.startAt) <= now()) throw new ClientServiceError('CONFLICT', 'Cette offre ne peut plus être acceptée. Actualisez le dossier.');
         const request = find(db.requests, quote.requestId);
         if (request.status !== 'QUOTED') throw new ClientServiceError('CONFLICT', 'La demande a changé. Actualisez le dossier.');
+        bridge?.decision(user, quote.id, 'accepted');
         quote.status = 'ACCEPTED'; request.status = 'ACCEPTED'; request.history.push({ at: new Date(now()).toISOString(), label: 'Offre acceptée — horaire à confirmer' });
         const reservation = { id: id('RES'), requestId: request.id, quoteId: quote.id, serviceTitle: quote.serviceTitle, status: 'PENDING' as const, startAt: quote.startAt, endAt: quote.endAt, timeZone: 'America/Toronto', address: quote.address,
           instructions: [request.schedule.instructions, request.schedule.accessNotes].filter(Boolean).join('\n'), summary: request.category === 'RESIDENTIAL' ? request.residential.description : request.business.description, cancellationDeadline: new Date(Date.parse(quote.startAt) - 86_400_000).toISOString() };
@@ -69,6 +78,7 @@ export function createMockClientServices(options: Options = {}): ClientServices 
         const db = await database(user); const quote = find(db.quotes, key);
         if (quote.status !== 'PENDING') throw new ClientServiceError('CONFLICT', 'Cette offre ne peut plus être refusée.');
         if (reason.length > 500) throw new ClientServiceError('VALIDATION', 'Le motif est limité à 500 caractères.');
+        bridge?.decision(user, quote.id, 'refused');
         quote.status = 'REJECTED'; quote.rejectionReason = reason.trim();
         const request = find(db.requests, quote.requestId); request.status = 'IN_REVIEW'; request.history.push({ at: new Date(now()).toISOString(), label: 'Offre refusée — demande conservée pour réanalyse' });
       },
@@ -78,6 +88,7 @@ export function createMockClientServices(options: Options = {}): ClientServices 
       cancel: async (user, key) => {
         const db = await database(user); const reservation = find(db.reservations, key);
         if (!canCancelReservation(reservation, now())) throw new ClientServiceError('CONFLICT', 'Le délai d’annulation est dépassé ou ce rendez-vous est déjà clôturé. Contactez le support.');
+        bridge?.cancel(user, reservation.quoteId);
         reservation.status = 'CANCELLED'; const request = find(db.requests, reservation.requestId); request.status = 'CANCELLED';
         request.history.push({ at: new Date(now()).toISOString(), label: 'Réservation annulée par le client' }); notify(db, 'Réservation annulée', 'Votre annulation a été enregistrée.', { kind: 'reservation', id: key });
       },

@@ -18,7 +18,7 @@ export function MissionReportScreen({ route, navigation }: EmployeeScreenProps<'
  const form = useForm<CompletionReport>({ resolver: zodResolver(completionSchema), defaultValues: useEmployeeDraftStore.getState().drafts[id] ?? emptyEmployeeDraft() });
  useEffect(() => { const subscription = form.watch(value => useEmployeeDraftStore.getState().update(id, { note: value.note ?? '', incident: value.incident ?? '' })); return () => subscription.unsubscribe(); }, [form, id]);
  const complete = useEmployeeMutation(employeeService.complete, () => { useEmployeeDraftStore.getState().clear(id); navigation.reset({ index: 1, routes: [{ name: 'EmployeeTabs' }, { name: 'MissionCompleted', params: { id } }] }); });
- return <ScreenLayout title="Rapport de fin" subtitle="L’heure de fin sera enregistrée à la confirmation." onBack={() => navigation.goBack()}><AsyncState query={query}>{query.data && <>
+ return <ScreenLayout showFormLogo title="Rapport de fin" subtitle="L’heure de fin sera enregistrée à la confirmation." onBack={() => navigation.goBack()}><AsyncState query={query}>{query.data && <>
   <AppText>{query.data.checklist.filter(item => item.isDone).length} / {query.data.checklist.length} tâches cochées</AppText>
   {query.data.status === 'IN_PROGRESS' ? <>
    {query.data.checklist.some(item => !item.isDone) && <AppText>Des tâches restent non cochées. Précisez la raison dans votre rapport si nécessaire.</AppText>}

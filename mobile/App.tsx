@@ -1,3 +1,9 @@
+import { useEffect } from 'react';
+import { initializeWorkspace } from './src/services/localWorkspace';
+import { useLocalStatus } from './src/store/localStatusStore';
+import { WorkspaceStatus } from './src/components/WorkspaceStatus';
+import { Button } from './src/components/Button';
+import { AppText } from './src/components/AppText';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -19,13 +25,15 @@ export default function App() {
 }
 function ThemedApp() {
   const { colors } = useAppTheme();
+  const local = useLocalStatus();
+  useEffect(() => { void initializeWorkspace(); }, []);
   const styles = createStyles(colors);
 
   const [fontsLoaded, fontError] = useFonts({ Poppins_600SemiBold, Poppins_700Bold, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold });
   return <SafeAreaProvider>
     <StatusBar style="light" />
-    {!fontsLoaded && !fontError ? <View style={styles.loading}><ActivityIndicator size="large" color={colors.white} accessibilityLabel="Chargement de MagicPro" /></View>
-      : <QueryClientProvider client={queryClient}><RootNavigator /></QueryClientProvider>}
+    {(!fontsLoaded && !fontError) || (!local.ready && !local.error) ? <View style={styles.loading}><ActivityIndicator size="large" color={colors.white} accessibilityLabel="Chargement de MagicPro" /></View>
+      : !local.ready ? <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}><AppText>{local.error}</AppText><Button title="Réessayer" onPress={() => void initializeWorkspace()} /></View> : <QueryClientProvider client={queryClient}><View style={{ flex: 1 }}><WorkspaceStatus /><RootNavigator /></View></QueryClientProvider>}
   </SafeAreaProvider>;
 }
 const createStyles = (colors: ThemeColors) => StyleSheet.create({ loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryDark } });

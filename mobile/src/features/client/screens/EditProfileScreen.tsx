@@ -15,5 +15,5 @@ function ProfileForm({ user }: { user: User }) {
 }
 export function EditProfileScreen({ navigation }: ClientScreenProps<'EditProfile'>) {
   const query = useClientQuery('profile', profileService.get);
-  return <ClientLayout title="Informations personnelles" subtitle="Gardez vos coordonnées à jour." onBack={() => navigation.goBack()}><AsyncState query={query}>{query.data && <ProfileForm user={query.data} />}</AsyncState></ClientLayout>;
+  return <ClientLayout showFormLogo title="Informations personnelles" subtitle="Gardez vos coordonnées à jour." onBack={() => navigation.goBack()}><AsyncState query={query}>{query.data && <ProfileForm user={query.data} />}</AsyncState></ClientLayout>;
 }

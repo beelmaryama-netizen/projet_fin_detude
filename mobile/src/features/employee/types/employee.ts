@@ -5,7 +5,8 @@ export interface MissionPhoto { id: string; uri: string; phase: PhotoPhase; crea
 export interface EmployeeMission {
   id: string; title: string; status: MissionStatus; startAt: string; endAt: string;
   address: string; description: string; accessNotes: string; instructions: string;
-  team: string[]; checklist: { id: string; label: string; isDone: boolean }[];
+  team: string[]; checklist: { id: string; label: string; isDone: boolean; note?: string }[];
+  clientPhotos?: { id: string; uri: string; name: string }[]; requiresBeforePhotos?: boolean; requiresAfterPhotos?: boolean;
   photos: MissionPhoto[]; startedAt?: string; completedAt?: string; report?: string; incident?: string;
 }
 export interface EmployeeNotification { id: string; title: string; message: string; missionId: string; read: boolean; createdAt: string }
@@ -15,7 +16,7 @@ export interface EmployeeService {
   list(user: User): Promise<EmployeeMission[]>;
   get(user: User, id: string): Promise<EmployeeMission>;
   start(user: User, input: { id: string; photos: MissionPhoto[] }): Promise<EmployeeMission>;
-  toggle(user: User, input: { id: string; itemId: string; isDone: boolean }): Promise<EmployeeMission>;
+  toggle(user: User, input: { id: string; itemId: string; isDone: boolean; note?: string }): Promise<EmployeeMission>;
   addPhoto(user: User, input: { id: string; photo: MissionPhoto }): Promise<EmployeeMission>;
   removePhoto(user: User, input: { id: string; photoId: string }): Promise<EmployeeMission>;
   complete(user: User, input: { id: string; report: CompletionReport }): Promise<EmployeeMission>;

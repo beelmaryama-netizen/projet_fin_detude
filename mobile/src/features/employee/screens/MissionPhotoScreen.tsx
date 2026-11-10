@@ -1,3 +1,4 @@
+import { keepLocalFile } from '../../../services/durableFiles';
 import { useEffect, useRef, useState } from 'react';
 import { Image, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -33,14 +34,15 @@ export function MissionPhotoScreen({ route, navigation }: EmployeeScreenProps<'B
    if (!permission.granted) throw new Error('Autorisez l’accès dans les réglages de votre appareil.');
    const result = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
    if (!mounted.current || result.canceled || !result.assets[0] || useAuthStore.getState().session?.user.id !== user.id || useEmployeeDraftStore.getState().ownerId !== user.id) return;
-   const photo: MissionPhoto = { id: 'photo-' + Date.now() + '-' + Math.random().toString(36).slice(2), uri: result.assets[0].uri, phase, createdAt: new Date().toISOString() };
+   const photo: MissionPhoto = { id: 'photo-' + Date.now() + '-' + Math.random().toString(36).slice(2), uri: await keepLocalFile(result.assets[0].uri, result.assets[0].fileName ?? 'photo.jpg'), phase, createdAt: new Date().toISOString() };
+   if (!mounted.current || useAuthStore.getState().session?.user.id !== user.id || useEmployeeDraftStore.getState().ownerId !== user.id) return;
    if (planned) update(id, { photos: [...(useEmployeeDraftStore.getState().drafts[id]?.photos ?? []), photo].slice(0, 5) });
    else await add.mutateAsync({ id, photo });
   } catch (e) { if (mounted.current) setError(employeeError(e)); } finally { lock.current = false; if (mounted.current) setPicking(false); }
  }
- return <ScreenLayout title={phase === 'BEFORE' ? 'Photos avant' : 'Photos après'} subtitle="Ajoutez jusqu’à 5 photos. Évitez les personnes et les documents confidentiels." onBack={() => navigation.goBack()}>
+ return <ScreenLayout showFormLogo title={phase === 'BEFORE' ? 'Photos avant' : 'Photos après'} subtitle="Ajoutez jusqu’à 5 photos. Évitez les personnes et les documents confidentiels." onBack={() => navigation.goBack()}>
   <AsyncState query={query}>{mission && <>
-   <AppText>{photos.length} / 5 photos</AppText>
+   <AppText>{photos.length} / 5 photos</AppText>{(phase === 'BEFORE' ? mission.requiresBeforePhotos : mission.requiresAfterPhotos) && <AppText>Au moins une photo est obligatoire pour cette intervention.</AppText>}
    {photos.map((photo, index) => <View key={photo.id} style={{ gap: 8 }}><Image source={{ uri: photo.uri }} accessibilityLabel={'Photo ' + (index + 1)} style={{ height: 200, width: '100%', borderRadius: 12 }} resizeMode="contain" />
     {editable && <Button title={'Supprimer la photo ' + (index + 1)} variant="secondary" disabled={busy} onPress={() => planned ? update(id, { photos: photos.filter(p => p.id !== photo.id) }) : remove.mutate({ id, photoId: photo.id })} />}
    </View>)}

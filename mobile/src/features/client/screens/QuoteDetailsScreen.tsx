@@ -28,6 +28,8 @@ export function QuoteDetailsScreen({ navigation, route }: ClientScreenProps<'Quo
       <MessageBanner tone="info" message={quote.adminNote} />
       {quote.rejectionReason && <AppText>Motif du refus : {quote.rejectionReason}</AppText>}
       {pending && <><Button title="Accepter l’offre" onPress={() => state.open('accept')} /><Button title="Refuser" variant="secondary" onPress={() => state.open('reject')} /></>}
+      <AppText>Équipe prévue : {quote.employeeCount ?? 1} employé(s)</AppText>
+      <Button title="Demander une clarification" variant="secondary" onPress={() => navigation.navigate('ContactSupport', { requestId: quote.requestId, quoteId: quote.id })} />
       <Button title="Voir ma demande" variant="link" onPress={() => navigation.navigate('RequestDetails', { id: quote.requestId })} />
     </>}</AsyncState>
     <ConfirmModal visible={state.dialog !== null} title={state.dialog === 'accept' ? 'Accepter cette offre ?' : 'Refuser cette offre ?'} message={state.dialog === 'accept' ? `Vous acceptez le total de ${quote ? money(quote.totalCents) : ''}. Le rendez-vous restera en attente de confirmation par MagicPro.` : 'La demande restera consultable et pourra être réanalysée.'} confirmLabel={state.dialog === 'accept' ? 'Confirmer l’acceptation' : 'Confirmer le refus'} busy={busy} onCancel={state.close} onConfirm={() => { if (!busy) { if (state.dialog === 'accept') state.accept.mutate(); else state.reject.mutate(state.reason); } }} error={state.accept.error || state.reject.error ? errorMessage(state.accept.error ?? state.reject.error) : undefined}>

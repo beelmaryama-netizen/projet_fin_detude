@@ -7,10 +7,10 @@ export function RequestProgress({ activeStep, professional = false }: { activeSt
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
 
-  const steps = ['Type de service', professional ? 'Établissement' : 'Détails du logement', 'Date et préférences', 'Confirmation'];
+  const steps = professional ? ['Type de service', 'Établissement', 'Date et préférences', 'Confirmation'] : ['Type de service', 'Logement', 'Services', 'Date et préférences', 'Confirmation'];
   const { width, fontScale } = useWindowDimensions();
   const wrapped = width < 380 || fontScale > 1.2;
-  return <View accessibilityLabel={`Étape ${activeStep} sur 4 : ${steps[activeStep - 1]}`} style={styles.row}>
+  return <View accessibilityLabel={`Étape ${activeStep} sur ${steps.length} : ${steps[activeStep - 1]}`} style={styles.row}>
     {steps.map((step, index) => <View key={step} style={[styles.step, wrapped && styles.wrapped]}>
       <View style={[styles.circle, index + 1 <= activeStep && styles.active]}>
         <AppText variant="label" style={{ color: index + 1 <= activeStep ? colors.white : colors.muted }}>{index + 1 < activeStep ? '✓' : index + 1}</AppText>

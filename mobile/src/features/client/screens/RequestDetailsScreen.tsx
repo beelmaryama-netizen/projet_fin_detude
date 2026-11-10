@@ -18,6 +18,7 @@ export function RequestDetailsScreen({ navigation, route }: ClientScreenProps<'R
     <AsyncState query={query}>{request && <>
       <StatusChip label={requestStatusLabels[request.status]} />
       <RequestSummary details={request} photos={request.photos} schedule={request.schedule} address={request.address} />
+      <Button title="Contacter le support pour cette demande" variant="secondary" onPress={() => navigation.navigate('ContactSupport', { requestId: request.id })} />
       <Card><AppText variant="heading">Historique</AppText>{request.history.map((entry, index) => <AppText key={index}>{dateLabel(entry.at)} · {entry.label}</AppText>)}</Card>
       <AsyncState query={quotes}>{associated.length ? associated.map(quote => <Card key={quote.id}><AppText variant="heading">Offre associée</AppText><StatusChip label={quoteStatusLabels[effectiveQuoteStatus(quote)]} /><Button title="Voir l’offre" onPress={() => navigation.navigate('QuoteDetails', { id: quote.id })} /></Card>) : <MessageBanner tone="info" message={['NEW', 'IN_REVIEW', 'QUOTED'].includes(request.status) ? 'Votre demande est en cours d’analyse.' : 'Aucune offre associée à cette demande.'} />}</AsyncState>
     </>}</AsyncState>

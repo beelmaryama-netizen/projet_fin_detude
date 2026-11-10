@@ -12,7 +12,7 @@ export interface FormFieldProps extends TextInputProps {
   password?: boolean;
 }
 export const FormField = forwardRef<TextInput, FormFieldProps>(function FormField(
-  { label, error, hint, password = false, style, onFocus, onBlur, ...props }, ref,
+  { label, error, hint, password = false, secureTextEntry = false, style, onFocus, onBlur, ...props }, ref,
 ) {
   const { colors, dark } = useAppTheme();
   const styles = createStyles(colors);
@@ -27,11 +27,11 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
         accessibilityHint={error ?? hint} placeholderTextColor={colors.muted}
         keyboardAppearance={dark ? "dark" : "light"}
         selectionColor={colors.primary}
-        secureTextEntry={password && !visible}
+        secureTextEntry={(password || secureTextEntry) && !visible}
         onFocus={event => { setFocused(true); onFocus?.(event); }}
         onBlur={event => { setFocused(false); onBlur?.(event); }}
         style={[styles.input, style]} />
-      {password && <Pressable onPress={() => setVisible(value => !value)} accessibilityRole="button"
+      {(password || secureTextEntry) && <Pressable onPress={() => setVisible(value => !value)} accessibilityRole="button"
         accessibilityLabel={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
         accessibilityState={{ checked: visible }} style={styles.eye}>
         <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.muted} accessible={false} />

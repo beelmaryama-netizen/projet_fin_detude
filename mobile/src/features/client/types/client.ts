@@ -16,6 +16,7 @@ export type ClientRequest = RequestDetails & {
 }
 export interface ClientQuote {
   id: string; requestId: string; serviceTitle: string; address: string; status: QuoteStatus;
+  employeeCount?: number;
   durationHours: number; startAt: string; endAt: string; expiresAt: string;
   lines: { label: string; cents: number }[]; taxes: { label: string; cents: number }[];
   totalCents: number; adminNote: string; rejectionReason?: string;
@@ -25,7 +26,7 @@ export interface ClientNotification { id: string; title: string; text: string; c
 export interface NotificationPreferences { newQuotes: boolean; bookingConfirmations: boolean; bookingChanges: boolean; reminders: boolean }
 export interface ProfileInput { firstName: string; lastName: string; phone: string }
 export interface SecuritySettings { mfaEnabled: boolean; hasPassword: boolean }
-export interface SupportInput { subject: string; message: string }
+export interface SupportInput { subject: string; message: string; requestId?: string; quoteId?: string; reservationId?: string }
 export interface ClientServices {
   requests: { list(user: User): Promise<ClientRequest[]>; get(user: User, id: string): Promise<ClientRequest>; create(user: User, input: RequestSubmission): Promise<ClientRequest> };
   quotes: { list(user: User): Promise<ClientQuote[]>; get(user: User, id: string): Promise<ClientQuote>; accept(user: User, id: string): Promise<ClientReservation>; reject(user: User, id: string, reason: string): Promise<void> };

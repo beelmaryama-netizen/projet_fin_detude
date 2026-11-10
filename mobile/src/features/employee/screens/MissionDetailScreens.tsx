@@ -1,3 +1,5 @@
+import { AttachmentGallery } from '../../../components/AttachmentGallery';
+import { ChecklistTask } from '../components/ChecklistTask';
 import { ScreenLayout } from '../../../components/ScreenLayout';
 import { AppText } from '../../../components/AppText';
 import { Button } from '../../../components/Button';
@@ -19,6 +21,7 @@ export function MissionDetailsScreen({ navigation, route }: EmployeeScreenProps<
       <MissionCard mission={mission} actionLabel={mission.status === "IN_PROGRESS" ? "Suivre la mission" : "Consulter la checklist"} onPress={() => mission.status === 'IN_PROGRESS' ? navigation.navigate('MissionActive', { id: mission.id }) : navigation.navigate('MissionChecklist', { id: mission.id })} />
       <Card><AppText variant="heading">Service et tâches</AppText><AppText>{mission.description}</AppText><AppText>{missionProgress(mission)}</AppText><AppText>Équipe : {mission.team.join(', ')}</AppText></Card>
       <Card><AppText variant="heading">Accès et consignes</AppText><AppText>{mission.accessNotes}</AppText><AppText>{mission.instructions}</AppText></Card>
+      {!!mission.clientPhotos?.length && <Card><AppText variant="heading">Photos fournies par le client</AppText><AttachmentGallery photos={mission.clientPhotos} /></Card>}
       <MessageBanner message={directions.error} /><Button title="Ouvrir l’itinéraire" variant="secondary" icon="navigate-outline" onPress={() => void directions.open()} />
       <Button title="Contacter l’administration" variant="secondary" onPress={() => navigation.navigate('EmployeeHelp', { missionId: mission.id })} />
       {mission.status === 'PLANNED' && <Button title="Préparer le démarrage" onPress={() => navigation.navigate('BeforePhotos', { id: mission.id })} />}
@@ -49,7 +52,7 @@ export function MissionActiveScreen({ navigation, route }: EmployeeScreenProps<'
 export function MissionChecklistScreen({ navigation, route }: EmployeeScreenProps<'MissionChecklist'>) {
   const query = useEmployeeMission(route.params.id); const mutation = useEmployeeMutation(employeeService.toggle); const mission = query.data;
   return <ScreenLayout title="Checklist de mission" subtitle="Les tâches sont préparées par l’administration. Les changements sont enregistrés au fur et à mesure dans cette démonstration." onBack={() => navigation.goBack()}>
-    <AsyncState query={query}>{mission && <><AppText>{missionProgress(mission)}</AppText>{mission.checklist.map(item => <ToggleRow key={item.id} label={item.label} value={item.isDone} disabled={mutation.isPending || mission.status !== 'IN_PROGRESS'} onChange={isDone => mutation.mutate({ id: mission.id, itemId: item.id, isDone })} />)}{mission.status !== 'IN_PROGRESS' && <MessageBanner tone="info" message="La checklist est consultable ici et modifiable uniquement pendant la mission." />}</>}</AsyncState>
+    <AsyncState query={query}>{mission && <><AppText>{missionProgress(mission)}</AppText>{mission.checklist.map(item => <ChecklistTask key={item.id} item={item} disabled={mutation.isPending || mission.status !== 'IN_PROGRESS'} onSave={(isDone, note) => mutation.mutate({ id: mission.id, itemId: item.id, isDone, note })} />)}{mission.status !== 'IN_PROGRESS' && <MessageBanner tone="info" message="La checklist est consultable ici et modifiable uniquement pendant la mission." />}</>}</AsyncState>
     <MessageBanner message={mutation.error ? employeeError(mutation.error) : undefined} /><Button title="Retour à la mission" variant="secondary" onPress={() => navigation.goBack()} />
   </ScreenLayout>;
 }

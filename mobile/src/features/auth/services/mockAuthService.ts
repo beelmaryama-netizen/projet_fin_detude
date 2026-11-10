@@ -7,12 +7,23 @@ export const DEMO_PASSWORD = 'MagicPro!2026';
 const CODE_LIFETIME = 5 * 60_000;
 const RESEND_DELAY = 30_000;
 const MAX_ATTEMPTS = 5;
-interface Account { user: User; password: string; verified: boolean; mfa: boolean }
+export interface Account { user: User; password: string; verified: boolean; mfa: boolean }
 interface PendingChallenge { public: Challenge; accountId?: string; attempts: number }
-interface MockOptions { latency?: number; now?: () => number }
+interface MockOptions { latency?: number; now?: () => number; encode?: (password: string) => Promise<string>; verify?: (password: string, stored: string) => Promise<boolean> }
+export interface MockAuthControls {
+ snapshot: () => Promise<{ accounts: Account[]; sequence: number }>;
+ restore: (data: { accounts: Account[]; sequence: number }) => void;
+ configureAccess: (check: (user: User) => boolean) => void;
+ updateEmployeeAccount: (admin: User, previousEmail: string, profile: Pick<User, "email" | "firstName" | "lastName" | "phone">) => void;
+ provisionEmployee: (admin: User, employee: User, password: string) => Promise<void>;
+}
 
 /** In-memory simulator. Never use this service or its fixed OTP in production. */
-export function createMockAuthService(options: MockOptions = {}): AuthService {
+export function createMockAuthService(options: MockOptions = {}): AuthService & MockAuthControls {
+ let allowed = (_user: User) => true;
+ const encode = options.encode ?? (async (password: string) => password);
+ const matches = options.verify ?? (async (password: string, stored: string) => password === stored);
+ const assertActive = (user: User) => { if (!allowed(user)) throw new AuthError('ACCOUNT_SUSPENDED', 'Ce compte est suspendu. Contactez MagicPro.'); };
   const now = options.now ?? Date.now;
   const pause = () => new Promise<void>(resolve => setTimeout(resolve, options.latency ?? 550));
   const accounts = new Map<string, Account>();
@@ -51,15 +62,35 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
   const getAccount = (userId: string) => {
     const account = accounts.get(userId);
     if (!account) throw new AuthError('ACCOUNT_NOT_FOUND', 'Reconnectez-vous pour continuer.');
-    return account;
+    assertActive(account.user); return account;
   };
   return {
+    configureAccess: check => { allowed = check; },
+    async snapshot() { for (const account of accounts.values()) if (account.password && !account.password.startsWith('sha256$')) account.password = await encode(account.password); return { accounts: JSON.parse(JSON.stringify([...accounts.values()])) as Account[], sequence }; },
+    restore(data) { accounts.clear(); for (const account of data.accounts) accounts.set(account.user.id, account); sequence = data.sequence; challenges.clear(); resets.clear(); },
+    updateEmployeeAccount(admin, previousEmail, profile) {
+     if (getAccount(admin.id).user.role !== 'ADMIN') throw new AuthError('FORBIDDEN', 'Action réservée à l’administration.');
+     const account = findByEmail(previousEmail.toLowerCase());
+     const email = emailSchema.parse(profile.email);
+     const duplicate = findByEmail(email);
+     if (duplicate && duplicate !== account) throw new AuthError('EMAIL_EXISTS', 'Ce courriel est déjà utilisé.');
+     if (!account) return; // Legacy directory entries do not yet have login credentials.
+     if (account.user.role !== 'EMPLOYEE') throw new AuthError('FORBIDDEN', 'Ce compte n’est pas un compte employé.');
+     account.user = { ...account.user, email, firstName: profile.firstName.trim(), lastName: profile.lastName.trim(), phone: profile.phone?.trim() };
+     for (const [key, pending] of challenges) if (pending.accountId === account.user.id) challenges.delete(key);
+    },
+    async provisionEmployee(admin, employee, password) {
+     const actor = getAccount(admin.id); if (actor.user.role !== 'ADMIN' || employee.role !== 'EMPLOYEE') throw new AuthError('FORBIDDEN', 'Action réservée à l’administration.');
+     if (findByEmail(emailSchema.parse(employee.email))) throw new AuthError('EMAIL_EXISTS', 'Ce courriel est déjà utilisé.');
+     passwordSchema.parse(password); accounts.set(employee.id, { user: { ...employee, mustChangePassword: true }, password: await encode(password), verified: true, mfa: true });
+    },
     async login(input) {
       await pause();
       const account = findByEmail(emailSchema.parse(input.email));
-      if (!account || account.password !== input.password) {
+      if (!account || !(await matches(input.password, account.password))) {
         throw new AuthError('INVALID_CREDENTIALS', 'Le courriel ou le mot de passe est incorrect.');
       }
+      assertActive(account.user);
       if (!account.verified || account.mfa) return { kind: 'verification', challenge: issue(account.user.email, account.verified ? 'login' : 'registration', account.user.id) };
       return { kind: 'authenticated', session: sessionFor(account) };
     },
@@ -70,7 +101,7 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
       passwordSchema.parse(input.password);
       // Explicit allowlist: even an unexpected runtime role property cannot grant privileges.
       const user: User = { id: id('user'), email, firstName: input.firstName.trim(), lastName: input.lastName.trim(), phone: input.phone.trim(), role: 'CLIENT' };
-      accounts.set(user.id, { user, password: input.password, verified: false, mfa: false });
+      accounts.set(user.id, { user, password: await encode(input.password), verified: false, mfa: false });
       return issue(email, 'registration', user.id);
     },
     async requestPasswordReset(rawEmail) {
@@ -86,6 +117,7 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
       pending.attempts++;
       const account = pending.accountId ? accounts.get(pending.accountId) : undefined;
       if (code !== DEMO_CODE || !account) throw new AuthError('INVALID_CODE', 'Ce code est invalide. Vérifiez les 6 chiffres.');
+      assertActive(account.user);
       challenges.delete(challengeId);
       if (pending.public.purpose === 'recovery') {
         const resetToken = id('reset');
@@ -108,7 +140,7 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
       passwordSchema.parse(password);
       const account = accounts.get(ticket.accountId);
       if (!account) throw new AuthError('RESET_EXPIRED', 'Recommencez la récupération.');
-      account.password = password;
+      account.password = await encode(password); account.user = { ...account.user, mustChangePassword: false };
       for (const [key, value] of resets) if (value.accountId === ticket.accountId) resets.delete(key);
       for (const [key, value] of challenges) if (value.accountId === ticket.accountId) challenges.delete(key);
     },
@@ -134,14 +166,14 @@ export function createMockAuthService(options: MockOptions = {}): AuthService {
     async getSecurity(userId) { await pause(); const account = getAccount(userId); return { mfaEnabled: account.mfa, hasPassword: !!account.password }; },
     async changePassword(userId, currentPassword, password) {
       await pause(); const account = getAccount(userId);
-      if (!account.password || account.password !== currentPassword) throw new AuthError('INVALID_PASSWORD', 'Le mot de passe actuel est incorrect ou ce compte utilise un fournisseur externe.');
-      passwordSchema.parse(password); account.password = password; account.user = { ...account.user, mustChangePassword: false };
+      if (!account.password || !(await matches(currentPassword, account.password))) throw new AuthError('INVALID_PASSWORD', 'Le mot de passe actuel est incorrect ou ce compte utilise un fournisseur externe.');
+      passwordSchema.parse(password); account.password = await encode(password); account.user = { ...account.user, mustChangePassword: false };
       for (const [key, value] of resets) if (value.accountId === userId) resets.delete(key);
       for (const [key, value] of challenges) if (value.accountId === userId) challenges.delete(key);
     },
     async setMfa(userId, enabled, currentPassword, code) {
       await pause(); const account = getAccount(userId);
-      if ((account.password && account.password !== currentPassword) || code !== DEMO_CODE) throw new AuthError('INVALID_VERIFICATION', 'Vérifiez le mot de passe et le code de démonstration.');
+      if ((account.password && !(await matches(currentPassword, account.password))) || code !== DEMO_CODE) throw new AuthError('INVALID_VERIFICATION', 'Vérifiez le mot de passe et le code de démonstration.');
       account.mfa = enabled;
     },
   };

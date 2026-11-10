@@ -1,6 +1,6 @@
 export interface ClientReservation {
   id: string;
-  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'IN_PROGRESS' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
   startAt: string;
   endAt: string;
   timeZone: string;
@@ -11,4 +11,5 @@ export interface ClientReservation {
   instructions: string;
   summary: string;
   cancellationDeadline: string;
+  team?: string[]; completedAt?: string; report?: string;
 }

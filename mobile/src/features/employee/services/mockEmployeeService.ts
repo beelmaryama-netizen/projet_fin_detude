@@ -2,9 +2,11 @@ import type { User } from '../../../types/identity';
 import { EmployeeServiceError, type EmployeeMission, type EmployeeNotification, type EmployeePreferences, type EmployeeService } from '../types/employee';
 import { completionSchema, contactSchema, missionPhotoSchema } from '../schemas/employeeSchemas';
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-interface Database { missions: EmployeeMission[]; notifications: EmployeeNotification[]; preferences: EmployeePreferences }
-export function createMockEmployeeService(options: { latency?: number; now?: () => number; fail?: () => boolean } = {}): EmployeeService {
-  const databases = new Map<string, Database>(); const now = options.now ?? Date.now; let sequence = 0;
+export interface EmployeeDatabase { missions: EmployeeMission[]; notifications: EmployeeNotification[]; preferences: EmployeePreferences }
+export interface EmployeeBridge { sync: (user: User, db: EmployeeDatabase) => void; changed: (user: User, mission: EmployeeMission) => void }
+export function createMockEmployeeService(options: { latency?: number; now?: () => number; fail?: () => boolean } = {}): EmployeeService & { snapshot: () => Record<string, EmployeeDatabase>; restore: (value: Record<string, EmployeeDatabase>) => void; connect: (value: EmployeeBridge) => void } {
+  let bridge: EmployeeBridge | undefined;
+  const databases = new Map<string, EmployeeDatabase>(); const now = options.now ?? Date.now; let sequence = 0;
   const date = (days: number, hour: number) => { const value = new Date(now() + days * 86400000); value.setUTCHours(hour, 0, 0, 0); return value.toISOString(); };
   async function database(user: User) {
     await new Promise<void>(resolve => setTimeout(resolve, options.latency ?? 350));
@@ -27,36 +29,42 @@ export function createMockEmployeeService(options: { latency?: number; now?: () 
       db = { missions, notifications: missions.filter(item => item.status === 'PLANNED').map(item => ({ id: 'notification-' + item.id, title: 'Nouvelle mission assignée', message: item.title, missionId: item.id, read: false, createdAt: new Date(now()).toISOString() })), preferences: { assignments: true, changes: true } };
       databases.set(user.id, db);
     }
+    bridge?.sync(user, db);
     return db;
   }
-  function find(db: Database, id: string) { const mission = db.missions.find(item => item.id === id); if (!mission) throw new EmployeeServiceError('Cette mission n’est pas disponible ou ne vous est plus assignée.'); return mission; }
+  function find(db: EmployeeDatabase, id: string) { const mission = db.missions.find(item => item.id === id); if (!mission) throw new EmployeeServiceError('Cette mission n’est pas disponible ou ne vous est plus assignée.'); return mission; }
   function active(mission: EmployeeMission) { if (mission.status !== 'IN_PROGRESS') throw new EmployeeServiceError('Cette action nécessite une mission en cours.'); }
   return {
+    snapshot: () => copy(Object.fromEntries(databases)), restore: value => { databases.clear(); for (const [id, db] of Object.entries(value)) databases.set(id, db); },
+    connect: value => { bridge = value; },
     list: async user => copy((await database(user)).missions),
     get: async (user, id) => copy(find(await database(user), id)),
     start: async (user, input) => {
       const mission = find(await database(user), input.id);
       if (mission.status !== 'PLANNED') throw new EmployeeServiceError('Cette mission a déjà démarré ou ne peut plus démarrer.');
       if (input.photos.length > 5 || input.photos.some(photo => !missionPhotoSchema.safeParse(photo).success || photo.phase !== 'BEFORE')) throw new EmployeeServiceError('Vérifiez les photos avant intervention.');
-      mission.status = 'IN_PROGRESS'; mission.startedAt = new Date(now()).toISOString(); mission.photos = copy(input.photos); return copy(mission);
+      if (mission.requiresBeforePhotos && input.photos.length === 0) throw new EmployeeServiceError('Ajoutez une photo avant de démarrer.');
+      mission.status = 'IN_PROGRESS'; mission.startedAt = new Date(now()).toISOString(); mission.photos = copy(input.photos); bridge?.changed(user, mission); return copy(mission);
     },
     toggle: async (user, input) => {
       const mission = find(await database(user), input.id); active(mission);
       const item = mission.checklist.find(value => value.id === input.itemId); if (!item) throw new EmployeeServiceError('Tâche introuvable.');
-      item.isDone = input.isDone; return copy(mission);
+      if (input.note && input.note.length > 500) throw new EmployeeServiceError('La note est limitée à 500 caractères.');
+      item.isDone = input.isDone; if (input.note !== undefined) item.note = input.note; bridge?.changed(user, mission); return copy(mission);
     },
     addPhoto: async (user, input) => {
       const mission = find(await database(user), input.id); active(mission);
       const parsed = missionPhotoSchema.safeParse(input.photo); if (!parsed.success) throw new EmployeeServiceError('Photo invalide.');
       if (mission.photos.some(item => item.id === input.photo.id)) return copy(mission);
       if (mission.photos.filter(item => item.phase === input.photo.phase).length >= 5) throw new EmployeeServiceError('Maximum 5 photos par étape.');
-      mission.photos.push(copy(parsed.data)); return copy(mission);
+      mission.photos.push(copy(parsed.data)); bridge?.changed(user, mission); return copy(mission);
     },
-    removePhoto: async (user, input) => { const mission = find(await database(user), input.id); active(mission); mission.photos = mission.photos.filter(item => item.id !== input.photoId); return copy(mission); },
+    removePhoto: async (user, input) => { const mission = find(await database(user), input.id); active(mission); mission.photos = mission.photos.filter(item => item.id !== input.photoId); bridge?.changed(user, mission); return copy(mission); },
     complete: async (user, input) => {
       const mission = find(await database(user), input.id); active(mission);
+      if (mission.requiresAfterPhotos && !mission.photos.some(photo => photo.phase === 'AFTER')) throw new EmployeeServiceError('Ajoutez une photo après avant de terminer.');
       const parsed = completionSchema.safeParse(input.report); if (!parsed.success) throw new EmployeeServiceError('Vérifiez le rapport de fin.');
-      mission.status = 'COMPLETED'; mission.completedAt = new Date(now()).toISOString(); mission.report = parsed.data.note; mission.incident = parsed.data.incident; return copy(mission);
+      mission.status = 'COMPLETED'; mission.completedAt = new Date(now()).toISOString(); mission.report = parsed.data.note; mission.incident = parsed.data.incident; bridge?.changed(user, mission); return copy(mission);
     },
     notifications: async user => copy((await database(user)).notifications),
     readNotification: async (user, id) => { const item = (await database(user)).notifications.find(value => value.id === id); if (item) item.read = true; },
