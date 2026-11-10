@@ -1,3 +1,4 @@
+import { localFilesEnabled, localUploadSignature } from './localFiles.service.js';
 import { prisma } from '../config/prisma.js';
 import { cloudinary } from '../config/cloudinary.js';
 import { AppError } from '../utils/AppError.js';
@@ -41,6 +42,8 @@ export async function uploadSignature(user, { target, id }) {
     await accessibleMission(user, id);
   }
 
+  if (localFilesEnabled()) return localUploadSignature(user, target, id);
+  if (!process.env.CLOUDINARY_API_SECRET || !process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) throw new AppError(503, 'Le stockage des photos n’est pas configuré sur le serveur.');
   const folder = folderFor(target, id);
   const timestamp = Math.round(Date.now() / 1000);
   const params = { timestamp, folder, type: 'authenticated' };
@@ -100,11 +103,13 @@ export async function removeRequestPhoto(user, requestId, photoId) {
 
 export async function addMissionPhoto(user, missionId, { fileKey, caption, photoType }) {
   const mission = await accessibleMission(user, missionId);
-  if (user.role === 'EMPLOYEE' && mission.status !== 'IN_PROGRESS') {
+  if (user.role === 'EMPLOYEE' && !(mission.status === 'IN_PROGRESS' || (mission.status === 'PLANNED' && photoType === 'BEFORE'))) {
     throw new AppError(409, 'Les photos se prennent pendant une mission en cours');
   }
-  if (['CANCELLED'].includes(mission.status)) throw new AppError(409, 'Mission annulée');
+  if (['CANCELLED', 'COMPLETED'].includes(mission.status)) throw new AppError(409, 'Mission annulée');
   checkKey(fileKey, 'MISSION', missionId);
+  if (caption) { const existing = await prisma.missionPhoto.findFirst({ where: { missionId, employeeId: user.id, caption, photoType } }); if (existing) return withUrls([existing])[0]; }
+  if (await prisma.missionPhoto.count({ where: { missionId, photoType } }) >= 5) throw new AppError(409, 'Maximum 5 photos par étape');
 
   const [photo] = await prisma.$transaction([
     prisma.missionPhoto.create({
@@ -117,6 +122,13 @@ export async function addMissionPhoto(user, missionId, { fileKey, caption, photo
   return withUrls([photo])[0];
 }
 
+export async function removeMissionPhoto(user, missionId, photoId) {
+ const mission = await accessibleMission(user, missionId);
+ if (!['PLANNED', 'IN_PROGRESS'].includes(mission.status)) throw new AppError(409, 'Intervention clôturée');
+ const photo = await prisma.missionPhoto.findFirst({ where: { id: photoId, missionId } });
+ if (!photo) throw new AppError(404, 'Photo introuvable');
+ await prisma.$transaction([prisma.missionPhoto.delete({ where: { id: photoId } }), prisma.missionLog.create({ data: { missionId, actorUserId: user.id, eventType: 'PHOTO_REMOVED', note: photo.photoType } })]);
+}
 export async function listMissionPhotos(user, missionId) {
   await accessibleMission(user, missionId);
   const photos = await prisma.missionPhoto.findMany({ where: { missionId }, orderBy: { createdAt: 'asc' } });

@@ -1,3 +1,4 @@
+import { apiMode } from '../../../services/api/config';
 import { View } from 'react-native';
 import { Controller } from 'react-hook-form';
 import { AuthLayout } from '../../auth/components/AuthLayout';
@@ -34,12 +35,13 @@ export function ResidentialSchedulePreferencesScreen({ navigation }: ClientScree
     </Card>)}
     <MessageBanner message={state.form.formState.errors.availabilities?.root?.message ?? state.form.formState.errors.availabilities?.message} />
     {state.availabilityFields.fields.length < 2 && <Button title="Ajouter une deuxième disponibilité" variant="secondary" onPress={() => state.availabilityFields.append({ date: '', slot: '' })} />}
-    {state.professional ? <Card><AppText variant="heading">Adresse du site</AppText><AppText>{state.siteAddress}</AppText><Button title="Modifier l’adresse du site" variant="link" onPress={() => navigation.navigate('BusinessRequest', { step: 1 })} /></Card> : <>
+    {state.professional && !apiMode ? <Card><AppText variant="heading">Adresse du site</AppText><AppText>{state.siteAddress}</AppText><Button title="Modifier l’adresse du site" variant="link" onPress={() => navigation.navigate('BusinessRequest', { step: 1 })} /></Card> : <>
     <AppText variant="heading">Adresse du service</AppText>
     <AsyncState query={addresses}><Controller control={state.form.control} name="addressId" render={({ field }) => <View accessibilityRole="radiogroup" accessibilityLabel="Adresse du service" style={{ gap: spacing.sm }}>
       {(addresses.data ?? []).map(address => <SelectionCard key={address.id} title={`${address.label}${address.isDefault ? ' · Par défaut' : ''}`} description={addressLabel(address)} selected={field.value === address.id} onPress={() => field.onChange(address.id)} />)}
-      <SelectionCard title="Je préciserai l’adresse avec l’équipe" selected={!field.value} onPress={() => field.onChange('')} />
+      {!apiMode && <SelectionCard title="Je préciserai l’adresse avec l’équipe" selected={!field.value} onPress={() => field.onChange('')} />}
     </View>} /></AsyncState>
+    <MessageBanner message={state.form.formState.errors.addressId?.message} />
     <Button title="Gérer mes adresses" variant="link" onPress={() => navigation.navigate('MyAddresses')} />
     </>}
     <ControlledField control={state.form.control} name="instructions" label="Instructions particulières" multiline maxLength={1000} style={{ minHeight: 100 }} />

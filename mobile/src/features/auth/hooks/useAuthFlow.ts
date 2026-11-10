@@ -11,7 +11,7 @@ import { forgotPasswordSchema, loginSchema, registerSchema, type ForgotPasswordF
 
 export function getAuthError(error: Error | null): string | undefined {
   if (!error) return undefined;
-  return error instanceof AuthError ? error.message : 'Une erreur est survenue. Réessayez dans quelques instants.';
+  return error instanceof AuthError || error.name === 'ApiError' ? error.message : 'Une erreur est survenue. Réessayez dans quelques instants.';
 }
 function useAuthCompletion() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
@@ -40,10 +40,11 @@ export function useRegistration() {
   const form = useForm<RegisterForm>({ resolver: zodResolver(registerSchema), mode: 'onTouched',
     defaultValues: { firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' } });
   const register = useMutation({
-    mutationFn: ({ confirmPassword: _confirmation, ...input }: RegisterForm) => authService.register(input),
+    mutationFn: async ({ confirmPassword: _confirmation, ...input }: RegisterForm) => await authService.register(input),
     onSuccess: challenge => {
       form.reset({ ...form.getValues(), password: '', confirmPassword: '' });
-      navigation.navigate('Verification', { challenge });
+      if ('kind' in challenge) complete(challenge);
+      else navigation.navigate('Verification', { challenge });
     },
   });
   const social = useMutation({ mutationFn: authService.socialLogin, onSuccess: complete });

@@ -1,4 +1,7 @@
+import { createApiEmployee } from '../services/apiAdminService';
 import * as Crypto from 'expo-crypto';
+import { apiMode } from '../../../services/api/config';
+import { adminActions } from '../services/apiAdminService';
 import { authService } from '../../auth/services/authService';
 import { useAuthStore } from '../../../store/authStore';
 import { ToggleRow } from '../../../components/ToggleRow';
@@ -88,6 +91,7 @@ function CreateEmployee({ store, onBack, onNavigate }: DirectoryProps) {
   const [created, setCreated] = useState<{ email: string; password: string; id: string }>();
   async function create(input: EmployeeInput) {
    if (busy) return; setBusy(true); setError(undefined);
+   if (apiMode) { try { setCreated(await createApiEmployee(input)); } catch (e) { setError(e instanceof Error ? e.message : 'Création impossible'); } finally { setBusy(false); } return; }
    const admin = useAuthStore.getState().session?.user;
    if (!admin || admin.role !== 'ADMIN') { setError('Session administrateur requise.'); setBusy(false); return; }
    const result = store.createEmployee(input);
@@ -100,11 +104,11 @@ function CreateEmployee({ store, onBack, onNavigate }: DirectoryProps) {
    } catch (e) { useAdminStore.setState(s => ({ employees: s.employees.filter(e => e.id !== result.value.id), audit: s.audit.filter(a => a.entityId !== result.value.id) })); setError(e instanceof Error ? e.message : 'Création impossible.'); }
    finally { setBusy(false); }
   }
-  if (created) return <AdminPage title="Accès employé créé" onBack={onBack}><AdminCard><AppText>Compte utilisable sur cet appareil : {created.email}</AppText><AppText selectable>Mot de passe temporaire : {created.password}</AppText><AppText>Notez cet accès avant de quitter. Code de démonstration : 123456. Le mot de passe doit être changé à la première connexion. Aucun courriel n’a été envoyé.</AppText><EmployerActionButton title="Voir la fiche employé" onPress={() => onNavigate({ screen: 'employee-detail', employeeId: created.id })} /></AdminCard></AdminPage>;
-  return <AdminPage showFormLogo title="Créer un compte employé" subtitle="Ajoutez un membre à votre équipe de démonstration." onBack={onBack}>
+  if (created) return <AdminPage title="Accès employé créé" onBack={onBack}><AdminCard><AppText>Compte employé : {created.email}</AppText><AppText selectable>Mot de passe temporaire : {created.password}</AppText><AppText>Notez cet accès avant de quitter. {!apiMode && 'Code de démonstration : 123456.'} Le mot de passe doit être changé à la première connexion. Aucun courriel n’a été envoyé.</AppText><EmployerActionButton title="Voir la fiche employé" onPress={() => onNavigate({ screen: 'employee-detail', employeeId: created.id })} /></AdminCard></AdminPage>;
+  return <AdminPage showFormLogo title="Créer un compte employé" subtitle="Ajoutez un membre à votre équipe." onBack={onBack}>
     <AdminCard>
-      <AdminBadge label="Création locale" tone="orange" />
-      <AppText style={s.muted}>Un accès local sera créé avec un mot de passe temporaire affiché une seule fois. Le compte pourra se connecter sur cet appareil.</AppText>
+      <AdminBadge label={apiMode ? "Compte serveur" : "Création locale"} tone="orange" />
+      <AppText style={s.muted}>{apiMode ? 'Un compte sera créé sur le serveur. Notez son mot de passe temporaire affiché une seule fois.' : 'Un accès local sera créé avec un mot de passe temporaire affiché une seule fois.'}</AppText>
     </AdminCard>
     <EmployeeForm busy={busy} submitLabel="Créer le compte employé" error={error} onCancel={onBack} onSubmit={input => void create(input)} />
   </AdminPage>;
@@ -178,7 +182,7 @@ function EmployeeDetails({ store, employeeId, onBack, onNavigate }: DirectoryPro
   const history = missions.filter(mission => ['completed', 'cancelled'].includes(mission.status));
   return <AdminPage title={employeeName(employee)} subtitle="Fiche employé et suivi des affectations" onBack={onBack}>
     <AdminCard>
-      <View style={s.row}><AdminBadge label={employee.active ? 'Actif localement' : 'Suspendu localement'} tone={employee.active ? 'green' : 'red'} />{employee.activationPending && <AdminBadge label="Activation à prévoir" tone="orange" />}</View>
+      <View style={s.row}><AdminBadge label={employee.active ? 'Actif' : 'Suspendu'} tone={employee.active ? 'green' : 'red'} />{employee.activationPending && <AdminBadge label="Activation à prévoir" tone="orange" />}</View>
       {employee.activationPending && <AppText style={s.muted}>Fiche créée en démonstration. Aucune invitation transmise ; l’activation réelle du compte reste à connecter.</AppText>}
       {!employee.active && <AppText style={s.muted}>Les nouvelles affectations sont bloquées dans cette démonstration. Les missions déjà affectées et leur historique sont conservés.</AppText>}
       <AdminDetail label="Courriel" value={employee.email} />
@@ -191,7 +195,8 @@ function EmployeeDetails({ store, employeeId, onBack, onNavigate }: DirectoryPro
       <EmployerActionButton title={employee.active ? 'Suspendre les affectations' : 'Réactiver les affectations'} variant="secondary" icon={employee.active ? 'pause-circle-outline' : 'play-circle-outline'} onPress={() => { setDialogError(undefined); setConfirm(true); }} />
       <AdminNotice message={notice} />
     </AdminCard>
-    {editing && <EmployeeForm key={employee.id} employee={employee} submitLabel="Enregistrer les modifications" error={error} onCancel={() => { setEditing(false); setError(undefined); }} onSubmit={input => {
+    {editing && <EmployeeForm key={employee.id} employee={employee} submitLabel="Enregistrer les modifications" error={error} onCancel={() => { setEditing(false); setError(undefined); }} onSubmit={async input => {
+      if (apiMode) { const result = await adminActions.updateEmployee(employee.id, input); if (!result.ok) setError(result.error); else { setEditing(false); setNotice('Fiche enregistrée sur le serveur.'); } return; }
       const admin = useAuthStore.getState().session?.user;
       if (!admin || admin.role !== 'ADMIN') { setError('Reconnectez-vous comme administrateur.'); return; }
       const previous = useAdminStore.getState();
@@ -211,9 +216,9 @@ function EmployeeDetails({ store, employeeId, onBack, onNavigate }: DirectoryPro
         : 'Cet employé pourra de nouveau recevoir des affectations dans la démonstration.'}</AppText>
       <AppText style={s.muted}>Cette action bloque ou rétablit aussi la connexion au compte employé local sur cet appareil.</AppText>
       <AdminNotice message={dialogError} error />
-      <EmployerActionButton title={employee.active ? 'Confirmer la suspension' : 'Confirmer la réactivation'} onPress={() => {
+      <EmployerActionButton title={employee.active ? 'Confirmer la suspension' : 'Confirmer la réactivation'} onPress={async () => {
         const nextActive = !employee.active;
-        const result = store.setEmployeeActive(employee.id, nextActive);
+        const result = await adminActions.setEmployeeActive(employee.id, nextActive);
         if (!result.ok) { setDialogError(result.error); return; }
         setConfirm(false); setNotice(nextActive ? 'Les affectations sont réactivées localement.' : 'Les nouvelles affectations sont suspendues localement.');
       }} />
@@ -305,7 +310,7 @@ function ClientRequest({ request, store, onNavigate }: { request: EmployerReques
     {offer ? <EmployerActionButton title={offer.status === 'draft' ? 'Reprendre l’estimation' : 'Voir l’offre associée'} variant="secondary" onPress={() => onNavigate(offer.status === 'draft'
       ? { screen: 'estimate', requestId: request.id, offerId: offer.id }
       : { screen: 'offer-detail', offerId: offer.id })} />
-      : request.status !== 'confirmed' && <EmployerActionButton title="Créer une estimation" variant="secondary" onPress={() => onNavigate({ screen: 'estimate', requestId: request.id })} />}
+      : ['new', 'review', 'waiting'].includes(request.status) && <EmployerActionButton title="Créer une estimation" variant="secondary" onPress={() => onNavigate({ screen: 'estimate', requestId: request.id })} />}
   </AdminCard>;
 }
 

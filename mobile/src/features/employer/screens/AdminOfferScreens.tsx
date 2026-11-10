@@ -1,3 +1,5 @@
+import { apiMode } from '../../../services/api/config';
+import { adminActions } from '../services/apiAdminService';
 import { ToggleRow } from '../../../components/ToggleRow';
 import { useEmployerTheme, type EmployerTheme } from '../theme';
 import { useMemo, useState } from 'react';
@@ -13,7 +15,7 @@ import { dateLabel, formatMoney, isValidDate, localDate, parseDecimal, timeMinut
 import { useAdminStore } from '../store/adminStore';
 import { offerStatusLabels, type AdminOffer, type AdminScreenProps, type EstimateInput, type OfferStatus } from '../types/admin';
 
-const demoMessage = 'Démonstration : modifications conservées pendant cette session. Aucun courriel réel n’est envoyé.';
+const demoMessage = apiMode ? 'Les modifications sont enregistrées sur le serveur. Les taxes sont calculées par le serveur (TPS + TVQ).' : 'Démonstration : modifications conservées pendant cette session. Aucun courriel réel n’est envoyé.';
 const statusOptions = [
   { value: 'all', label: 'Toutes' }, { value: 'draft', label: 'Brouillons' },
   { value: 'sent', label: 'En attente' }, { value: 'accepted', label: 'Acceptées' },
@@ -53,7 +55,7 @@ function EstimateScreen({ route, onNavigate, onBack }: AdminScreenProps) {
   const requests = useAdminStore(state => state.requests);
   const offers = useAdminStore(state => state.offers);
   const settings = useAdminStore(state => state.settings);
-  const saveEstimate = useAdminStore(state => state.saveEstimate);
+  const saveEstimate = adminActions.saveEstimate;
   const requestId = route.screen === 'estimate' ? route.requestId : '';
   const requestedOfferId = route.screen === 'estimate' ? route.offerId : undefined;
   const request = requests.find(item => item.id === requestId);
@@ -62,7 +64,7 @@ function EstimateScreen({ route, onNavigate, onBack }: AdminScreenProps) {
   const [form, setForm] = useState<EstimateForm>(() => ({
     durationHours: String(draft?.durationHours ?? 3), employeeCount: String(draft?.employeeCount ?? 1),
     subtotal: draft ? (draft.subtotalCents / 100).toFixed(2).replace('.', ',') : '180,00',
-    taxPercent: String(draft?.taxPercent ?? settings.defaultTaxPercent).replace('.', ','),
+    taxPercent: String(apiMode ? 14.975 : draft?.taxPercent ?? settings.defaultTaxPercent).replace('.', ','),
     date: draft?.date ?? (request?.preferredDate.slice(0, 10) || localDate()),
     startTime: draft?.startTime ?? '09:00', endTime: draft?.endTime ?? '12:00',
     validityHours: String(draft?.validityHours ?? settings.defaultValidityHours), notes: draft?.notes ?? '',
@@ -75,7 +77,7 @@ function EstimateScreen({ route, onNavigate, onBack }: AdminScreenProps) {
   const subtotal = parseDecimal(form.subtotal);
   const taxRate = parseDecimal(form.taxPercent);
   const subtotalCents = subtotal === null ? 0 : Math.round(subtotal * 100);
-  const taxCents = taxRate === null ? 0 : Math.round(subtotalCents * taxRate / 100);
+  const taxCents = apiMode ? Math.round(subtotalCents * 0.05) + Math.round(subtotalCents * 0.09975) : taxRate === null ? 0 : Math.round(subtotalCents * taxRate / 100);
 
   const change = (key: keyof EstimateForm, value: string) => {
     setForm(current => ({ ...current, [key]: value }));
@@ -83,7 +85,7 @@ function EstimateScreen({ route, onNavigate, onBack }: AdminScreenProps) {
     setNotice(undefined);
   };
 
-  const save = (preview: boolean) => {
+  const save = async (preview: boolean) => {
     const next: FormErrors = {};
     const durationHours = parseDecimal(form.durationHours);
     const employeeCount = Number(form.employeeCount);
@@ -111,7 +113,7 @@ function EstimateScreen({ route, onNavigate, onBack }: AdminScreenProps) {
       subtotal: form.subtotal, taxPercent: form.taxPercent, date: form.date,
       startTime: form.startTime, endTime: form.endTime, validityHours, notes: form.notes.trim(),
     };
-    const result = saveEstimate(input);
+    const result = await saveEstimate(input);
     if (!result.ok) { setNotice({ message: result.error, error: true }); return; }
     setSavedId(result.value.id);
     if (preview) onNavigate({ screen: 'offer-preview', offerId: result.value.id });
@@ -155,8 +157,8 @@ function EstimateScreen({ route, onNavigate, onBack }: AdminScreenProps) {
       <AppText style={adminStyles.heading}>Montant de l’offre</AppText>
       <AdminField label="Montant hors taxes (CAD)" hint="Montant global de la prestation, pour toute l’équipe." value={form.subtotal}
         onChangeText={value => change('subtotal', value)} keyboardType="decimal-pad" error={errors.subtotal} />
-      <AdminField label="Taxes (%)" value={form.taxPercent} onChangeText={value => change('taxPercent', value)}
-        keyboardType="decimal-pad" error={errors.taxPercent} hint="Taux initial repris des paramètres administratifs." />
+      <AdminField label="Taxes (%)" editable={!apiMode} value={form.taxPercent} onChangeText={value => change('taxPercent', value)}
+        keyboardType="decimal-pad" error={errors.taxPercent} hint={apiMode ? "TPS 5 % et TVQ 9,975 %, calculées par le serveur." : "Taux initial repris des paramètres administratifs."} />
       <View style={adminStyles.divider}>
         <MoneyRow label="Sous-total" amount={subtotalCents} />
         <MoneyRow label="Taxes" amount={taxCents} />
@@ -207,7 +209,7 @@ function OfferContent({ offer }: { offer: AdminOffer }) {
       <MoneyRow label="Sous-total" amount={offer.subtotalCents} />
       <MoneyRow label={`Taxes (${String(offer.taxPercent).replace('.', ',')} %)`} amount={offer.taxCents} />
       <View style={adminStyles.divider}><MoneyRow label="Total (CAD)" amount={offer.totalCents} total /></View>
-      <AdminDetail label="Validité de l’offre" value={offer.validUntil ? `Jusqu’au ${timestampLabel(offer.validUntil)}` : `${offer.validityHours} heures à compter de l’envoi simulé`} />
+      <AdminDetail label="Validité de l’offre" value={offer.validUntil ? `Jusqu’au ${timestampLabel(offer.validUntil)}` : `${offer.validityHours} heures à compter de l’envoi`} />
       {offer.notes ? <AdminDetail label="Notes et conditions" value={offer.notes} /> : null}
       <AppText style={adminStyles.muted}>Contact : {settings.contactEmail}{settings.contactPhone ? ` · ${settings.contactPhone}` : ''}</AppText>
     </AdminCard>
@@ -220,9 +222,9 @@ function OfferRecordScreen({ route, onNavigate, onBack }: AdminScreenProps) {
   const offerId = route.screen === 'offer-preview' || route.screen === 'offer-detail' ? route.offerId : '';
   const offer = useAdminStore(state => state.offers.find(item => item.id === offerId));
   const mission = useAdminStore(state => state.missions.find(item => item.offerId === offerId));
-  const sendOffer = useAdminStore(state => state.sendOffer);
-  const resolveOffer = useAdminStore(state => state.resolveOffer);
-  const cancelOffer = useAdminStore(state => state.cancelOffer);
+  const sendOffer = adminActions.sendOffer;
+  const resolveOffer = adminActions.resolveOffer;
+  const cancelOffer = adminActions.cancelOffer;
   const [notice, setNotice] = useState<{ message: string; error?: boolean }>();
   const [confirmCancel, setConfirmCancel] = useState(false);
   const preview = route.screen === 'offer-preview';
@@ -230,29 +232,29 @@ function OfferRecordScreen({ route, onNavigate, onBack }: AdminScreenProps) {
     <AdminEmpty title="Offre introuvable" message="Ce dossier n’est plus disponible. Revenez à la liste des offres." />
   </AdminPage>;
   const status = effectiveStatus(offer);
-  const send = () => {
-    const result = sendOffer(offer.id);
+  const send = async () => {
+    const result = await sendOffer(offer.id);
     if (!result.ok) { setNotice({ message: result.error, error: true }); return; }
     onNavigate({ screen: 'offer-detail', offerId: result.value.id });
   };
-  const resolve = (decision: 'accepted' | 'refused') => {
-    const result = resolveOffer(offer.id, decision);
+  const resolve = async (decision: 'accepted' | 'refused') => {
+    const result = await resolveOffer(offer.id, decision);
     setNotice(result.ok ? { message: decision === 'accepted'
       ? 'Acceptation simulée : la mission est maintenant disponible pour l’assignation.'
       : 'Refus simulé enregistré.' } : { message: result.error, error: true });
   };
-  const cancel = () => {
-    const result = cancelOffer(offer.id);
+  const cancel = async () => {
+    const result = await cancelOffer(offer.id);
     setConfirmCancel(false);
     setNotice(result.ok ? { message: 'Offre annulée dans cette démonstration.' } : { message: result.error, error: true });
   };
   return <AdminPage title={preview ? 'Prévisualiser l’offre' : 'Suivi de l’offre'}
-    subtitle={preview ? 'Vérifiez l’estimation avant de simuler sa transmission au client.' : 'Retrouvez l’estimation et son état de traitement.'} onBack={onBack}>
+    subtitle={preview ? 'Vérifiez l’estimation avant son envoi au client.' : 'Retrouvez l’estimation et son état de traitement.'} onBack={onBack}>
     <OfferContent offer={offer} />
     {!preview && <AdminCard>
       <AppText style={adminStyles.heading}>Suivi administratif</AppText>
       <AdminDetail label="Création" value={timestampLabel(offer.createdAt)} />
-      {offer.sentAt && <AdminDetail label="Envoi simulé" value={timestampLabel(offer.sentAt)} />}
+      {offer.sentAt && <AdminDetail label="Envoi" value={timestampLabel(offer.sentAt)} />}
       {status === 'expired' && <AppText style={adminStyles.muted}>La période de validité est dépassée. Cette offre ne peut plus être acceptée.</AppText>}
       {status === 'accepted' && mission && <EmployerActionButton title="Voir la mission associée" icon="calendar-outline"
         onPress={() => onNavigate({ screen: 'mission-detail', missionId: mission.id })} />}
@@ -261,15 +263,15 @@ function OfferRecordScreen({ route, onNavigate, onBack }: AdminScreenProps) {
     {status === 'draft' && <>
       <EmployerActionButton title="Modifier l’estimation" variant="secondary" icon="create-outline"
         onPress={() => onNavigate({ screen: 'estimate', requestId: offer.requestId, offerId: offer.id })} />
-      <EmployerActionButton title="Simuler l’envoi" icon="paper-plane-outline" onPress={send} />
+      <EmployerActionButton title={apiMode ? "Envoyer l’offre" : "Simuler l’envoi"} icon="paper-plane-outline" onPress={send} />
     </>}
-    {!preview && status === 'sent' && <AdminCard>
+    {!apiMode && !preview && status === 'sent' && <AdminCard>
       <AdminBadge label="Simulation du parcours client" tone="orange" />
       <AppText style={adminStyles.muted}>Ces commandes servent à tester le suivi administratif. Elles représentent une réponse du client dans les données de démonstration.</AppText>
       <EmployerActionButton title="Simuler l’acceptation" icon="checkmark-circle-outline" onPress={() => resolve('accepted')} />
       <EmployerActionButton title="Simuler le refus" variant="secondary" icon="close-circle-outline" onPress={() => resolve('refused')} />
     </AdminCard>}
-    {!preview && (status === 'draft' || status === 'sent') && <EmployerActionButton title="Annuler cette offre"
+    {!preview && (status === 'draft' || (!apiMode && status === 'sent')) && <EmployerActionButton title="Annuler cette offre"
       variant="secondary" icon="ban-outline" onPress={() => setConfirmCancel(true)} />}
     {!preview && ['expired', 'refused', 'cancelled'].includes(status) && <EmployerActionButton title="Nouvelle estimation"
       icon="add-circle-outline" onPress={() => onNavigate({ screen: 'estimate', requestId: offer.requestId })} />}
@@ -309,7 +311,7 @@ function OffersScreen({ route, onNavigate, onBack }: AdminScreenProps) {
         && `${offer.id} ${request?.clientName ?? ''}`.toLocaleLowerCase('fr-CA').includes(search);
     }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [offers, requests, query, status, sentPeriod]);
-  const eligible = requests.filter(request => request.status !== 'confirmed'
+  const eligible = requests.filter(request => ['new', 'review', 'waiting', 'offer-sent'].includes(request.status)
     && !offers.some(offer => offer.requestId === request.id && ['sent', 'accepted'].includes(effectiveStatus(offer))));
   return <AdminPage title="Offres et estimations" subtitle="Préparez les offres et suivez les réponses des clients." onBack={onBack}>
     <EmployerActionButton title="Nouvelle estimation" icon="add-circle-outline" onPress={() => setChooseRequest(true)} />

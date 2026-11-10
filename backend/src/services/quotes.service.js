@@ -3,6 +3,11 @@ import { AppError } from '../utils/AppError.js';
 import { computeQuote } from '../utils/money.js';
 import { notify, notifyAdmins } from './notifications.service.js';
 
+function validateSchedule(data) {
+  if (!data.proposedStart && !data.proposedEnd) return;
+  if (!data.proposedStart || !data.proposedEnd || new Date(data.proposedEnd) <= new Date(data.proposedStart)) throw new AppError(400, 'Le créneau proposé est invalide');
+}
+
 // Statuts de demande où l'admin peut préparer une offre
 const QUOTABLE_REQUEST_STATUSES = ['UNDER_REVIEW', 'AWAITING_CLIENT'];
 
@@ -10,7 +15,7 @@ const itemsInclude = { items: true };
 
 // Le client ne voit pas les champs internes
 function forClient(quote) {
-  const { createdByAdminId, employeesNeeded, ...rest } = quote;
+  const { createdByAdminId, ...rest } = quote;
   return rest;
 }
 
@@ -70,6 +75,7 @@ export async function getOne(user, id) {
 // ================= ADMIN =================
 
 export async function create(adminId, requestId, data) {
+  validateSchedule(data);
   const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
   if (!request) throw new AppError(404, 'Demande introuvable');
   if (!QUOTABLE_REQUEST_STATUSES.includes(request.status)) {
@@ -90,6 +96,9 @@ export async function create(adminId, requestId, data) {
       subtotal,
       taxes,
       total,
+      proposedStart: data.proposedStart, proposedEnd: data.proposedEnd, notes: data.notes,
+      requiresBeforePhotos: data.requiresBeforePhotos, requiresAfterPhotos: data.requiresAfterPhotos,
+      validityHours: data.validityHours,
       estimatedMinutes: data.estimatedMinutes,
       employeesNeeded: data.employeesNeeded,
       items: { create: items },
@@ -106,7 +115,8 @@ async function getDraft(id) {
 }
 
 export async function update(id, data) {
-  await getDraft(id);
+  const draft = await getDraft(id);
+  validateSchedule({ ...draft, ...data });
   const { items: rawItems, ...fields } = data;
 
   // Si les lignes changent : on les remplace toutes et on recalcule les totaux
@@ -133,7 +143,7 @@ export async function remove(id) {
   await prisma.quote.delete({ where: { id } });
 }
 
-export async function send(id, { validDays }) {
+export async function send(id, { validDays, validHours }) {
   const quote = await getDraft(id);
   const request = await prisma.serviceRequest.findUnique({ where: { id: quote.requestId } });
   if (!QUOTABLE_REQUEST_STATUSES.includes(request.status)) {
@@ -152,7 +162,7 @@ export async function send(id, { validDays }) {
       data: {
         status: 'SENT',
         sentAt: now,
-        expiresAt: new Date(now.getTime() + validDays * 86400000),
+        expiresAt: new Date(now.getTime() + (validHours ?? (validDays ? validDays * 24 : quote.validityHours)) * 3600000),
       },
       include: itemsInclude,
     }),
@@ -199,6 +209,7 @@ export async function accept(user, id) {
         requestId: quote.requestId,
         acceptedQuoteId: id,
         status: 'PENDING_CONFIRMATION',
+        scheduledStart: quote.proposedStart, scheduledEnd: quote.proposedEnd,
       },
     });
 

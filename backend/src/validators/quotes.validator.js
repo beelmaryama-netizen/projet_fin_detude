@@ -7,6 +7,10 @@ const item = z.object({
 });
 
 export const createQuoteSchema = z.object({
+  proposedStart: z.coerce.date().optional(), proposedEnd: z.coerce.date().optional(),
+  validityHours: z.number().int().min(1).max(720).default(48),
+  notes: z.string().max(2000).optional(),
+  requiresBeforePhotos: z.boolean().default(false), requiresAfterPhotos: z.boolean().default(false),
   items: z.array(item).min(1, 'Au moins une ligne').max(50),
   estimatedMinutes: z.number().int().positive().max(100000).optional(),
   employeesNeeded: z.number().int().min(1).max(50).default(1),
@@ -17,5 +21,6 @@ export const updateQuoteSchema = createQuoteSchema
   .refine((d) => Object.keys(d).length > 0, 'Aucun champ à modifier');
 
 export const sendQuoteSchema = z.object({
-  validDays: z.number().int().min(1).max(90).default(14),
+  validDays: z.number().int().min(1).max(90).optional(),
+  validHours: z.number().int().min(1).max(720).optional(),
 });

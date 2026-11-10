@@ -1,3 +1,4 @@
+import { apiMode } from '../../../services/api/config';
 import { StyleSheet, View } from 'react-native';
 import type { AuthScreenProps } from '../../../navigation/types';
 import { AuthLayout } from '../components/AuthLayout';
@@ -11,7 +12,7 @@ import { spacing } from '../../../theme/tokens';
 
 export function RegisterScreen({ navigation }: AuthScreenProps<'Register'>) {
   const auth = useRegistration();
-  return <AuthLayout title="Créer mon compte" subtitle="Votre premier pas vers des espaces plus propres." step="INSCRIPTION CLIENT · 1 SUR 2" onBack={() => navigation.goBack()}>
+  return <AuthLayout title="Créer mon compte" subtitle="Votre premier pas vers des espaces plus propres." step={apiMode ? "INSCRIPTION CLIENT" : "INSCRIPTION CLIENT · 1 SUR 2"} onBack={() => navigation.goBack()}>
     <View style={styles.fields}>
       <ControlledField control={auth.form.control} name="firstName" label="Prénom" autoComplete="given-name" textContentType="givenName" autoCapitalize="words" returnKeyType="next" onSubmitEditing={() => auth.form.setFocus('lastName')} editable={!auth.busy} />
       <ControlledField control={auth.form.control} name="lastName" label="Nom" autoComplete="family-name" textContentType="familyName" autoCapitalize="words" returnKeyType="next" onSubmitEditing={() => auth.form.setFocus('email')} editable={!auth.busy} />

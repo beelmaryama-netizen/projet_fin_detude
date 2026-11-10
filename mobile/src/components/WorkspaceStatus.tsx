@@ -1,3 +1,4 @@
+import { apiMode } from '../services/api/config';
 import { useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Network from 'expo-network';
@@ -14,7 +15,7 @@ export function WorkspaceStatus() {
  }, []);
  if (!state.offline && !state.error) return null;
  return <SafeAreaView edges={['top']} style={{ paddingHorizontal: 16, paddingTop: 8 }}>
- <MessageBanner tone={state.error ? 'error' : 'info'} message={state.error ?? ('Connexion perdue. Vous pouvez continuer en mode local sur cet appareil.' + (state.lastSaved ? ' Dernière sauvegarde : ' + new Date(state.lastSaved).toLocaleTimeString('fr-CA') + '.' : ''))} />
+ <MessageBanner tone={state.error ? 'error' : 'info'} message={state.error ?? ((apiMode ? 'Connexion perdue. Les envois nécessitent une connexion au serveur.' : 'Connexion perdue. Vous pouvez continuer en mode local sur cet appareil.') + (state.lastSaved ? ' Dernière sauvegarde : ' + new Date(state.lastSaved).toLocaleTimeString('fr-CA') + '.' : ''))} />
  <Button title="Réessayer" variant="link" onPress={() => { void Network.getNetworkStateAsync().then(n => useLocalStatus.setState({ offline: n.isConnected === false || n.isInternetReachable === false })).catch(() => undefined); void saveWorkspace(); }} />
  </SafeAreaView>;
 }

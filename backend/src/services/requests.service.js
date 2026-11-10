@@ -29,6 +29,10 @@ const detailInclude = {
 export async function create(clientId, data) {
   const { requestType, addressId, description, availabilities, residential, business } = data;
 
+  if (data.submissionKey) {
+    const existing = await prisma.serviceRequest.findUnique({ where: { clientId_submissionKey: { clientId, submissionKey: data.submissionKey } }, include: detailInclude });
+    if (existing) return existing;
+  }
   // L'adresse doit appartenir au client
   const address = await prisma.address.findUnique({ where: { id: addressId } });
   if (!address || address.userId !== clientId) throw new AppError(404, 'Adresse introuvable');
@@ -37,6 +41,8 @@ export async function create(clientId, data) {
   return prisma.serviceRequest.create({
     data: {
       clientId,
+      submissionKey: data.submissionKey,
+      uiDetails: data.uiDetails,
       addressId,
       requestType,
       description,

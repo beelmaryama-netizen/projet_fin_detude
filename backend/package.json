@@ -9,7 +9,7 @@
     "pretest": "prisma generate",
     "migrate": "prisma migrate dev",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
-    "test:db": "dotenv -e .env.test -- prisma migrate deploy"
+    "test:db": "node node_modules/dotenv-cli/cli.js -e .env.test -- prisma migrate deploy"
   },
   "keywords": [],
   "author": "",

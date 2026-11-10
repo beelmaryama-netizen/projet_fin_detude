@@ -45,7 +45,7 @@ export const clientBridge: ClientBridge = {
    let request = db.requests.find(r => r.id === source.id);
    if (!request && source.dossier) { request = copy(source.dossier); db.requests.unshift(request); }
    if (!request) continue;
-   const status: RequestStatus = ({ new: 'NEW', review: 'IN_REVIEW', waiting: 'IN_REVIEW', 'offer-sent': 'QUOTED', confirmed: 'ACCEPTED' } as const)[source.status];
+   const status: RequestStatus = ({ new: 'NEW', review: 'IN_REVIEW', waiting: 'IN_REVIEW', 'offer-sent': 'QUOTED', confirmed: 'ACCEPTED', completed: 'CLOSED', closed: 'CLOSED', cancelled: 'CANCELLED' } as const)[source.status];
    if (request.status !== status && !['CANCELLED', 'CLOSED'].includes(request.status)) { request.status = status; request.history.push({ at: new Date().toISOString(), label: 'Dossier actualisé par MagicPro' }); }
    for (const offer of state.offers.filter(o => o.requestId === source.id && o.status !== 'draft')) {
     const quote: ClientQuote = { id: offer.id, requestId: source.id, serviceTitle: source.serviceType, address: source.location,

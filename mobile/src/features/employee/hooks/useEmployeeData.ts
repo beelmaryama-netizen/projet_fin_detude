@@ -12,7 +12,7 @@ export function useEmployeeUser() {
 export const employeeError = (error: unknown) => error instanceof Error ? error.message : 'Impossible de terminer cette action.';
 export function useEmployeeQuery<T>(key: string, fetch: (user: User) => Promise<T>) {
   const user = useEmployeeUser();
-  return useQuery({ queryKey: [...employeeKey(user.id), key], queryFn: () => fetch(user), refetchOnMount: 'always' });
+  return useQuery({ queryKey: [...employeeKey(user.id), key], queryFn: () => fetch(user), refetchOnMount: 'always', refetchInterval: 30000 });
 }
 export function useEmployeeMission(id: string) { return useEmployeeQuery('mission-' + id, user => employeeService.get(user, id)); }
 export function useEmployeeMutation<T, V>(action: (user: User, value: V) => Promise<T>, success?: (result: T) => void) {

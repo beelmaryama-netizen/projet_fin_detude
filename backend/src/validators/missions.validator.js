@@ -25,6 +25,7 @@ export const listMissionsQuerySchema = z.object({
 });
 
 export const completeSchema = z.object({
+  incident: z.string().trim().max(2000).optional(),
   note: z.string().trim().max(2000).optional(),
 });
 
@@ -33,5 +34,6 @@ export const checklistItemsSchema = z.object({
 });
 
 export const toggleChecklistSchema = z.object({
+  note: z.string().trim().max(500).optional(),
   isDone: z.boolean(),
 });

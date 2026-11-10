@@ -67,5 +67,6 @@ export function getEmployerSummary(requests: readonly EmployerRequest[]) {
 
 /** These values are calendar dates, parsed at local noon rather than as UTC timestamps. */
 export function formatEmployerDate(date: string): string {
-  return new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${date}T12:00:00`));
+  if (!date || Number.isNaN(Date.parse(date))) return 'À confirmer';
+  return new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(date.length === 10 ? `${date}T12:00:00` : date));
 }

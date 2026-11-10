@@ -1,3 +1,4 @@
+import { apiMode } from '../../../services/api/config';
 import { businessSchemaFor } from '../schemas/businessSchema';
 import { isBusinessCategory } from '../types/business';
 import { useEffect } from 'react';
@@ -15,5 +16,5 @@ export function useSchedulePreferences(navigation: ClientScreenProps<'Residentia
   const validDetails = draft.category === 'RESIDENTIAL' ? residentialDetailsSchema.safeParse(draft.residential).success : isBusinessCategory(draft.category) && businessSchemaFor(draft.category).safeParse(draft.business).success;
   useEffect(() => { if (!validDetails) { if (isBusinessCategory(draft.category)) navigation.replace('BusinessRequest', { step: 0 }); else navigation.replace('ResidentialPropertyDetailsScreen'); } }, [validDetails, navigation, draft.category]);
   useEffect(() => { const subscription = form.watch(() => useRequestDraftStore.getState().updateSchedule(form.getValues())); return () => subscription.unsubscribe(); }, [form]);
-  return { professional: isBusinessCategory(draft.category), siteAddress: draft.business.siteAddress, form, availabilityFields, validDetails, continueRequest: form.handleSubmit(value => { draft.updateSchedule(value); navigation.navigate('RequestReview'); }) };
+  return { professional: isBusinessCategory(draft.category), siteAddress: draft.business.siteAddress, form, availabilityFields, validDetails, continueRequest: form.handleSubmit(value => { if (apiMode && !value.addressId) { form.setError('addressId', { message: 'Choisissez une adresse pour le service.' }); return; } draft.updateSchedule(value); navigation.navigate('RequestReview'); }) };
 }

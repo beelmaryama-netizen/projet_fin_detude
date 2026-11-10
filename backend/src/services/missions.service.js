@@ -1,3 +1,4 @@
+import { withinHours } from '../utils/availability.js';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { withUrls } from '../utils/photoUrl.js';
@@ -12,7 +13,7 @@ const ASSIGNABLE = ['TO_ASSIGN', 'PLANNED'];
 const adminInclude = {
   appointment: {
     include: {
-      acceptedQuote: { select: { id: true, estimatedMinutes: true, employeesNeeded: true } },
+      acceptedQuote: { select: { id: true, estimatedMinutes: true, employeesNeeded: true, requiresBeforePhotos: true, requiresAfterPhotos: true } },
       request: {
         include: {
           address: true,
@@ -42,8 +43,10 @@ const employeeInclude = {
       scheduledEnd: true,
       status: true,
       clientNotes: true,
+      acceptedQuote: { select: { requiresBeforePhotos: true, requiresAfterPhotos: true } },
       request: {
         select: {
+          photos: true,
           requestType: true,
           description: true,
           address: true,
@@ -63,7 +66,9 @@ const employeeInclude = {
 
 // Ajoute les URL signées des photos
 function present(mission) {
-  return mission && { ...mission, photos: withUrls(mission.photos) };
+  if (!mission) return mission;
+  const { acceptedQuote, ...appointment } = mission.appointment;
+  return { ...mission, appointment: { ...appointment, request: { ...appointment.request, photos: withUrls(appointment.request.photos) } }, requiresBeforePhotos: !!acceptedQuote?.requiresBeforePhotos, requiresAfterPhotos: !!acceptedQuote?.requiresAfterPhotos, photos: withUrls(mission.photos) };
 }
 
 // ---------- Chevauchements (règle 32) ----------
@@ -207,7 +212,7 @@ export async function assign(adminId, id, { employeeIds }) {
     // Seulement des comptes EMPLOYÉ actifs
     const employees = await tx.user.findMany({
       where: { id: { in: employeeIds }, role: 'EMPLOYEE', status: 'ACTIVE' },
-      select: { id: true },
+      select: { id: true, employeeDetails: true },
     });
     if (employees.length !== employeeIds.length) {
       throw new AppError(400, 'Un ou plusieurs employés sont invalides ou suspendus');
@@ -223,6 +228,7 @@ export async function assign(adminId, id, { employeeIds }) {
 
     // Règle 32 : vérification des chevauchements AVANT l'assignation
     const { scheduledStart, scheduledEnd } = mission.appointment;
+    if (employees.some(e => !withinHours(e.employeeDetails?.workingHours, scheduledStart, scheduledEnd))) throw new AppError(409, 'Créneau hors des disponibilités d’un employé');
     const conflicts = await findConflicts(tx, toAdd, scheduledStart, scheduledEnd, id);
     if (conflicts.length > 0) throw conflictError(conflicts);
 
@@ -308,7 +314,7 @@ export async function cancelForAppointment(tx, appointmentId, actorUserId) {
 async function findAssigned(employeeId, id) {
   const mission = await prisma.mission.findFirst({
     where: { id, assignments: { some: { employeeId, status: 'ACTIVE' } } },
-    include: { appointment: { include: { request: { select: { id: true, clientId: true } } } } },
+    include: { appointment: { include: { acceptedQuote: true, request: { select: { id: true, clientId: true } } } } },
   });
   if (!mission) throw new AppError(404, 'Mission introuvable');
   return mission;
@@ -322,6 +328,7 @@ export async function start(employeeId, id) {
     throw new AppError(409, `Réservation ${mission.appointment.status}, démarrage impossible`);
   }
 
+  if (mission.appointment.acceptedQuote.requiresBeforePhotos && !(await prisma.missionPhoto.count({ where: { missionId: id, photoType: 'BEFORE' } }))) throw new AppError(409, 'Une photo avant est obligatoire.');
   const now = new Date();
   await prisma.$transaction([
     prisma.mission.update({ where: { id }, data: { status: 'IN_PROGRESS', startedAt: now } }),
@@ -338,13 +345,14 @@ export async function start(employeeId, id) {
 }
 
 // 7.4 étapes 8-10 : mission + rendez-vous COMPLETED, client notifié "service terminé"
-export async function complete(employeeId, id, { note }) {
+export async function complete(employeeId, id, { note, incident }) {
   const mission = await findAssigned(employeeId, id);
   if (mission.status !== 'IN_PROGRESS') throw new AppError(409, `Impossible de terminer une mission ${mission.status}`);
+  if (mission.appointment.acceptedQuote.requiresAfterPhotos && !(await prisma.missionPhoto.count({ where: { missionId: id, photoType: 'AFTER' } }))) throw new AppError(409, 'Une photo après est obligatoire.');
 
   const now = new Date();
   await prisma.$transaction([
-    prisma.mission.update({ where: { id }, data: { status: 'COMPLETED', completedAt: now } }),
+    prisma.mission.update({ where: { id }, data: { status: 'COMPLETED', completedAt: now, report: note, incident } }),
     prisma.serviceAppointment.update({ where: { id: mission.appointmentId }, data: { status: 'COMPLETED' } }),
     prisma.serviceRequest.update({ where: { id: mission.appointment.request.id }, data: { status: 'COMPLETED' } }),
     prisma.missionLog.create({ data: { missionId: id, actorUserId: employeeId, eventType: 'COMPLETED', note } }),
@@ -392,7 +400,7 @@ export async function removeChecklistItem(adminId, id, itemId) {
 }
 
 // Employé assigné (mission en cours) ou admin
-export async function toggleChecklistItem(user, id, itemId, { isDone }) {
+export async function toggleChecklistItem(user, id, itemId, { isDone, note }) {
   const mission =
     user.role === 'EMPLOYEE'
       ? await findAssigned(user.id, id)
@@ -402,6 +410,7 @@ export async function toggleChecklistItem(user, id, itemId, { isDone }) {
     throw new AppError(409, 'La checklist se remplit pendant une mission en cours');
   }
 
+  if (!['PLANNED', 'TO_ASSIGN', 'IN_PROGRESS'].includes(mission.status)) throw new AppError(409, 'Mission clôturée, modification impossible');
   const item = await prisma.missionChecklistItem.findFirst({ where: { id: itemId, missionId: id } });
   if (!item) throw new AppError(404, 'Élément introuvable');
 
@@ -409,8 +418,8 @@ export async function toggleChecklistItem(user, id, itemId, { isDone }) {
     prisma.missionChecklistItem.update({
       where: { id: itemId },
       data: isDone
-        ? { isDone: true, doneById: user.id, doneAt: new Date() }
-        : { isDone: false, doneById: null, doneAt: null },
+        ? { isDone: true, doneById: user.id, doneAt: new Date(), note }
+        : { isDone: false, doneById: null, doneAt: null, note },
     }),
     prisma.missionLog.create({
       data: {

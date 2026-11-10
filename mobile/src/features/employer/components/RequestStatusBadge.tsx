@@ -11,6 +11,9 @@ const createStatusStyles = (theme: EmployerTheme): Record<EmployerRequest['statu
   background: string;
   icon: ComponentProps<typeof Ionicons>['name'];
 }> => ({
+  completed: { foreground: theme.success, background: theme.successSurface, icon: 'checkmark-done-outline' },
+  cancelled: { foreground: theme.ink, background: theme.paleBlue, icon: 'close-circle-outline' },
+  closed: { foreground: theme.ink, background: theme.paleBlue, icon: 'archive-outline' },
   new: { foreground: theme.blue, background: theme.paleBlue, icon: 'document-text-outline' },
   review: { foreground: theme.blue, background: theme.paleBlue, icon: 'search-outline' },
   waiting: { foreground: theme.ink, background: theme.paleBlue, icon: 'time-outline' },

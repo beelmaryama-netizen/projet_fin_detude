@@ -14,6 +14,7 @@ export const createAddressSchema = z.object({
   province: z.string().trim().toUpperCase().length(2).default('QC'),
   postalCode,
   accessNotes: z.string().trim().max(2000).optional(),
+  isDefault: z.boolean().optional(),
 });
 
 export const updateAddressSchema = createAddressSchema

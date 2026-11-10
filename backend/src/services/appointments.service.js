@@ -1,3 +1,4 @@
+import { withinHours } from '../utils/availability.js';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { findConflicts, cancelForAppointment } from './missions.service.js';
@@ -9,6 +10,7 @@ const CANCELLABLE = ['PENDING_CONFIRMATION', 'CONFIRMED'];
 const NOTES_EDITABLE = ['PENDING_CONFIRMATION', 'CONFIRMED'];
 
 const baseInclude = {
+  mission: { select: { report: true, completedAt: true, assignments: { where: { status: 'ACTIVE' }, select: { employee: { select: { firstName: true, lastName: true } } } } } },
   request: {
     select: {
       id: true,
@@ -22,8 +24,8 @@ const baseInclude = {
 
 // Le client ne voit pas qui a confirmé (champ interne)
 function forClient(appointment) {
-  const { confirmedByAdminId, ...rest } = appointment;
-  return rest;
+  const { confirmedByAdminId, mission, ...rest } = appointment;
+  return { ...rest, team: mission?.assignments.map(a => a.employee.firstName + ' ' + a.employee.lastName) ?? [], completedAt: mission?.completedAt, report: mission?.report };
 }
 
 async function findForUser(user, id) {
@@ -140,6 +142,8 @@ export async function reschedule(adminId, id, { scheduledStart, scheduledEnd }) 
   });
   if (mission && mission.assignments.length > 0) {
     const ids = mission.assignments.map((a) => a.employeeId);
+    const employees = await prisma.user.findMany({ where: { id: { in: ids } }, select: { employeeDetails: true } });
+    if (employees.some(e => !withinHours(e.employeeDetails?.workingHours, scheduledStart, scheduledEnd))) throw new AppError(409, 'Créneau hors des disponibilités d’un employé');
     const conflicts = await findConflicts(prisma, ids, scheduledStart, scheduledEnd, mission.id);
     if (conflicts.length > 0) {
       throw new AppError(409, 'Chevauchement horaire pour un employé assigné', 'SCHEDULE_CONFLICT');
