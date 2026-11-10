@@ -18,12 +18,12 @@ export function getOne(id, userId) {
 }
 
 export function create(userId, data) {
-  return prisma.address.create({ data: { ...data, userId } });
+  return prisma.$transaction(async tx => { if (data.isDefault) await tx.address.updateMany({ where: { userId }, data: { isDefault: false } }); return tx.address.create({ data: { ...data, userId } }); });
 }
 
 export async function update(id, userId, data) {
   await findOwned(id, userId);
-  return prisma.address.update({ where: { id }, data });
+  return prisma.$transaction(async tx => { if (data.isDefault) await tx.address.updateMany({ where: { userId }, data: { isDefault: false } }); return tx.address.update({ where: { id }, data }); });
 }
 
 export async function remove(id, userId) {

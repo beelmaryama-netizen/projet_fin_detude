@@ -1,3 +1,9 @@
+import { apiMode } from '../../../services/api/config';
+import { adminActions } from '../services/apiAdminService';
+import { useAdminConnection } from '../hooks/useAdminConnection';
+import { useAdminApiStatus, loadAdminData } from '../services/apiAdminService';
+import { MessageBanner } from '../../../components/MessageBanner';
+import { Button } from '../../../components/Button';
 import { AppearanceSettings } from '../../../components/AppearanceSettings';
 import { useEmployerTheme, type EmployerTheme } from '../theme';
 import { useEffect, useMemo, useState, type ComponentProps } from 'react';
@@ -43,6 +49,8 @@ type Panel = 'menu' | 'notifications' | 'period' | 'appearance';
 const panelTitles: Record<Panel, string> = { appearance: 'Apparence', menu: 'Espace administration', notifications: 'Notifications', period: 'Choisir une période' };
 
 export function AdminHomeScreen() {
+  useAdminConnection();
+  const apiStatus = useAdminApiStatus();
   const theme = useEmployerTheme();
   const styles = createStyles(theme);
 
@@ -93,7 +101,7 @@ export function AdminHomeScreen() {
     else if (request.status === 'offer-sent') {
       const offer = store.offers.find(o => o.requestId === request.id && o.status === 'sent');
       if (offer) navigate({ screen: 'offer-detail', offerId: offer.id }); else setSelectedId(request.id);
-    } else { store.markRequestReview(request.id); setSelectedId(request.id); }
+    } else { void adminActions.markRequestReview(request.id); setSelectedId(request.id); }
   }
   function requestCard(request: EmployerRequest) { return <EmployerRequestCard key={request.id} request={request} onView={() => setSelectedId(request.id)} onAction={() => requestAction(request)} />; }
   useEffect(() => {
@@ -111,8 +119,9 @@ export function AdminHomeScreen() {
     <View style={styles.root} aria-hidden={modalVisible} accessibilityElementsHidden={modalVisible} importantForAccessibility={modalVisible ? 'no-hide-descendants' : 'auto'}>
       <EmployerLayout activeTab={activeTab} navigationKey={route ? JSON.stringify(route) : tab} onTabChange={openTab} onMenu={() => setPanel('menu')}
         onNotifications={() => setPanel('notifications')} notificationCount={store.settings.notifyNewRequests ? newRequests.length : 0}>
+        {apiMode && <><MessageBanner message={apiStatus.error} />{apiStatus.busy && <AppText>Enregistrement en cours…</AppText>}<Button title="Actualiser les données" variant="link" disabled={apiStatus.busy} onPress={() => void loadAdminData().catch((e: unknown) => useAdminApiStatus.setState({ error: e instanceof Error ? e.message : 'Chargement impossible' }))} /></>}
         {route ? <>
-          <AppText style={styles.demoText}>Démonstration · Modifications conservées pendant cette session</AppText>
+          <AppText style={styles.demoText}>{apiMode ? 'Données du serveur MagicPro' : 'Démonstration locale'}</AppText>
           <AdminWorkspace key={JSON.stringify(route)} route={route} onNavigate={navigate} onBack={back} />
         </> : <>
           <View style={styles.pageHeading}>
@@ -149,7 +158,7 @@ export function AdminHomeScreen() {
         </>}
       </EmployerLayout>
     </View>
-    {selected && <EmployerRequestDetails request={selected} onClose={() => setSelectedId(null)} client={selectedClient} onAnalyze={() => store.markRequestReview(selected.id)}
+    {selected && <EmployerRequestDetails request={selected} onClose={() => setSelectedId(null)} client={selectedClient} onAnalyze={() => void adminActions.markRequestReview(selected.id)}
       onEstimate={() => navigate({ screen: 'estimate', requestId: selected.id, offerId: selectedOffer?.status === 'draft' ? selectedOffer.id : undefined })}
       onOffer={selectedOffer ? () => navigate({ screen: 'offer-detail', offerId: selectedOffer.id }) : undefined}
       onClient={selectedClient ? () => navigate({ screen: 'client-detail', clientId: selectedClient.id }) : undefined}

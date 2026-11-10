@@ -1,3 +1,4 @@
+import { apiMode } from '../../../services/api/config';
 import { SupportHistory } from '../../../components/SupportHistory';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,9 +14,9 @@ import type { ClientScreenProps } from '../../../navigation/types';
 export function ContactSupportScreen({ navigation, route }: ClientScreenProps<'ContactSupport'>) {
   const form = useForm<SupportInput>({ resolver: zodResolver(supportSchema), defaultValues: { subject: route.params?.quoteId ? 'Clarification de l’offre ' + route.params.quoteId : '', message: '', ...route.params }, mode: 'onTouched' });
   const send = useClientMutation(supportService.send, () => form.reset());
-  return <ClientLayout showFormLogo title="Contacter MagicPro" subtitle="Décrivez votre question. Dans cette version, l’envoi est simulé." onBack={() => navigation.goBack()}>
+  return <ClientLayout showFormLogo title="Contacter MagicPro" subtitle={apiMode ? "Votre message sera transmis à l’administration." : "Décrivez votre question. Dans cette version, l’envoi est simulé."} onBack={() => navigation.goBack()}>
     <ControlledField control={form.control} name="subject" label="Sujet" maxLength={100} /><ControlledField control={form.control} name="message" label="Message" multiline maxLength={2000} style={{ minHeight: 160 }} />
-    <MessageBanner message={send.error ? errorMessage(send.error) : undefined} />{send.isSuccess && <MessageBanner tone="success" message={`Message enregistré en démonstration · ${send.data.reference}. Aucun email réel n’a été envoyé.`} />}
+    <MessageBanner message={send.error ? errorMessage(send.error) : undefined} />{send.isSuccess && <MessageBanner tone="success" message={apiMode ? `Message transmis · ${send.data.reference}` : `Message enregistré en démonstration · ${send.data.reference}. Aucun email réel n’a été envoyé.`} />}
     <Button title="Envoyer le message" loading={send.isPending} onPress={() => void form.handleSubmit(value => send.mutate({ ...value, ...route.params }))()} />
     <SupportHistory />
   </ClientLayout>;

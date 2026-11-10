@@ -1,3 +1,6 @@
+import { initializeApiDrafts, saveApiDrafts } from './api/drafts';
+import { apiMode } from './api/config';
+import { restoreApiSession } from '../features/auth/services/apiAuthService';
 import { useAdminFilterStore } from '../store/adminFilterStore';
 import { Platform, AppState } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -32,6 +35,7 @@ async function write(value: string) {
  await FileSystem.moveAsync({ from: filename + '.pending', to: filename });
 }
 export function saveWorkspace(): Promise<void> {
+ if (apiMode) return saveApiDrafts();
  if (!hydrated) return Promise.resolve();
  queue = queue.catch(() => undefined).then(async () => {
   const snapshot: Snapshot = { version: 1, filters: useAdminFilterStore.getState().byOwner, auth: await authService.snapshot(), clients: clientServices.snapshot(), employees: employeeService.snapshot(), admin: useAdminStore.getState(), tickets: useSupportStore.getState().tickets, requests, drafts };
@@ -55,6 +59,7 @@ export function initializeWorkspace(): Promise<void> {
 }
 async function hydrateWorkspace() {
  try {
+  if (apiMode) { await initializeApiDrafts(); await restoreApiSession(); hydrated = true; useLocalStatus.setState({ ready: true, error: undefined }); return; }
   if (!configured) {
    configured = true; initializeSharedWorkflow(); clientServices.connect(clientBridge); employeeService.connect(employeeBridge);
    authService.configureAccess(user => user.role !== 'EMPLOYEE' || useAdminStore.getState().employees.some(e => e.email.toLowerCase() === user.email.toLowerCase() && e.active));
@@ -99,5 +104,5 @@ async function hydrateWorkspace() {
    useAdminStore.setState({ ...data.admin, ownerId: null }); useSupportStore.setState({ tickets: data.tickets ?? [] }); requests = data.requests ?? {}; drafts = data.drafts ?? {};
   }
   hydrated = true; useLocalStatus.setState({ ready: true, error: undefined }); await saveWorkspace();
- } catch { useLocalStatus.setState({ ready: false, error: 'Impossible de lire la sauvegarde locale. Réessayez ; les données existantes sont conservées.' }); }
+ } catch { useLocalStatus.setState({ ready: false, error: apiMode ? 'Connexion au backend impossible. Vérifiez son adresse et réessayez.' : 'Impossible de lire la sauvegarde locale. Réessayez ; les données existantes sont conservées.' }); }
 }

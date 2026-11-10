@@ -33,6 +33,8 @@ const business = z.object({
 
 const base = {
   addressId: z.string().uuid('addressId invalide'),
+  submissionKey: z.string().min(1).max(150).optional(),
+  uiDetails: z.object({ category: z.enum(['RESIDENTIAL', 'COMMERCIAL', 'INDUSTRIAL', 'MEDICAL']), residential: z.record(z.string(), z.unknown()).optional(), business: z.record(z.string(), z.unknown()).optional(), schedule: z.record(z.string(), z.unknown()).optional() }).refine(value => JSON.stringify(value).length <= 30000, 'Détails trop volumineux').optional(),
   description: z.string().trim().max(5000).optional(),
   availabilities,
 };

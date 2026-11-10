@@ -1,0 +1,1 @@
+ALTER TABLE `quotes` ADD COLUMN `validity_hours` INTEGER NOT NULL DEFAULT 48;

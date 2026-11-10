@@ -52,7 +52,7 @@ export function EmployerRequestDetails({ request, onClose, client, onAnalyze, on
             {request.dossier ? <><RequestSummary details={request.dossier} photos={request.dossier.photos} schedule={request.dossier.schedule} address={request.dossier.address} /><AttachmentGallery photos={request.dossier.photos} documents={request.dossier.category === 'RESIDENTIAL' ? [] : request.dossier.documents} /></> : <AppText style={styles.muted}>Aucune pièce jointe.</AppText>}
           </View>
           {request.status === 'new' && <EmployerActionButton title="Commencer l’analyse" onPress={onAnalyze} icon="search-outline" />}
-          {request.status !== 'confirmed' && request.status !== 'offer-sent' && <EmployerActionButton title="Créer une estimation" onPress={onEstimate} icon="document-text-outline" />}
+          {['new', 'review', 'waiting'].includes(request.status) && <EmployerActionButton title="Créer une estimation" onPress={onEstimate} icon="document-text-outline" />}
           {onOffer && <EmployerActionButton title="Consulter l’offre" variant="secondary" onPress={onOffer} icon="paper-plane-outline" />}
           {onMission && <EmployerActionButton title="Consulter la mission" variant="secondary" onPress={onMission} icon="calendar-outline" />}
           {onClient && <EmployerActionButton title="Voir la fiche client" variant="secondary" onPress={onClient} icon="person-outline" />}

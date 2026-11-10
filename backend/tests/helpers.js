@@ -8,6 +8,8 @@ export const api = () => request(app);
 // Vide toutes les tables (ordre enfants -> parents à cause des clés étrangères)
 export async function resetDb() {
   await prisma.$transaction([
+    prisma.supportTicket.deleteMany(),
+    prisma.appSetting.deleteMany(),
     prisma.notification.deleteMany(),
     prisma.deviceToken.deleteMany(),
     prisma.missionPhoto.deleteMany(),

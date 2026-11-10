@@ -1,3 +1,6 @@
+import { apiMode } from '../../../services/api/config';
+import { request } from '../../../services/api/transport';
+import type { UserDto } from '../../../services/api/dto';
 import { useAdminStore } from '../../employer/store/adminStore';
 import { SupportHistory } from '../../../components/SupportHistory';
 import { useState } from 'react';
@@ -24,7 +27,9 @@ import type { EmployeeScreenProps, EmployeeTabProps } from '../navigation/types'
 function updateSession(user: User) { const state = useAuthStore.getState(); if (state.session?.user.id === user.id) state.setSession({ ...state.session, user }); }
 export function EmployeeProfileScreen({ navigation }: EmployeeTabProps<'EmployeeProfile'>) {
  const user = useEmployeeUser(); const session = useSession();
- const availability = useAdminStore(s => s.employees.find(e => e.email === user.email)?.workingHours);
+ const localAvailability = useAdminStore(s => s.employees.find(e => e.email === user.email)?.workingHours);
+ const profile = useEmployeeQuery('availability', async () => apiMode ? (await request<UserDto>('GET', '/auth/me')).employeeDetails?.workingHours : localAvailability);
+ const availability = apiMode ? profile.data : localAvailability;
  return <ScreenLayout title="Mon profil"><Card><AppText variant="heading">{user.firstName} {user.lastName}</AppText><AppText>{user.email}</AppText><AppText>Employé</AppText></Card>
  <Card><AppText variant="heading">Mes disponibilités</AppText><AppText>{availability ? availability.days.map(day => ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][day]).join(', ') + ' · ' + availability.start + ' – ' + availability.end : 'À confirmer avec l’administration'}</AppText><AppText>Contactez l’administration pour modifier vos horaires.</AppText></Card>
  <Button title="Mes informations" variant="secondary" onPress={() => navigation.navigate('EmployeeProfileEdit')} />
@@ -61,11 +66,11 @@ export function EmployeeNotificationsScreen({ navigation }: EmployeeScreenProps<
 }
 export function EmployeePreferencesScreen({ navigation }: EmployeeScreenProps<'EmployeePreferences'>) {
  const query = useEmployeeQuery('preferences', employeeService.preferences); const save = useEmployeeMutation(employeeService.savePreferences);
- return <ScreenLayout title="Notifications" subtitle="Préférences enregistrées pour cette démonstration." onBack={() => navigation.goBack()}><AsyncState query={query}>{query.data && <Card><ToggleRow label="Nouvelles affectations" value={query.data.assignments} disabled={save.isPending} onChange={assignments => { if (query.data) save.mutate({ ...query.data, assignments }); }} /><ToggleRow label="Changements de planning" value={query.data.changes} disabled={save.isPending} onChange={changes => { if (query.data) save.mutate({ ...query.data, changes }); }} /></Card>}</AsyncState><MessageBanner message={save.error ? employeeError(save.error) : undefined} /></ScreenLayout>;
+ return <ScreenLayout title="Notifications" subtitle="Choisissez les notifications à recevoir." onBack={() => navigation.goBack()}><AsyncState query={query}>{query.data && <Card><ToggleRow label="Nouvelles affectations" value={query.data.assignments} disabled={save.isPending} onChange={assignments => { if (query.data) save.mutate({ ...query.data, assignments }); }} /><ToggleRow label="Changements de planning" value={query.data.changes} disabled={save.isPending} onChange={changes => { if (query.data) save.mutate({ ...query.data, changes }); }} /></Card>}</AsyncState><MessageBanner message={save.error ? employeeError(save.error) : undefined} /></ScreenLayout>;
 }
 export function EmployeeHelpScreen({ navigation, route }: EmployeeScreenProps<'EmployeeHelp'>) {
  const [reference, setReference] = useState<string>();
  const form = useForm<z.infer<typeof contactSchema>>({ resolver: zodResolver(contactSchema), defaultValues: { message: '', missionId: route.params?.missionId } });
  const send = useEmployeeMutation(employeeService.contact, result => { setReference(result); form.reset(); });
- return <ScreenLayout showFormLogo title="Contacter l’administration" subtitle="Décrivez votre question ou un problème lié à votre intervention." onBack={() => navigation.goBack()}><AppText>Mode démonstration : aucun message réel ne sera envoyé.</AppText>{reference && <Card><AppText>Demande simulée : {reference}</AppText></Card>}<ControlledField control={form.control} name="message" label="Votre message" multiline maxLength={2000} /><MessageBanner message={send.error ? employeeError(send.error) : undefined} /><Button title="Simuler l’envoi" loading={send.isPending} onPress={form.handleSubmit(value => send.mutate(value))} /><SupportHistory /></ScreenLayout>;
+ return <ScreenLayout showFormLogo title="Contacter l’administration" subtitle="Décrivez votre question ou un problème lié à votre intervention." onBack={() => navigation.goBack()}>{!apiMode && <AppText>Mode démonstration : aucun message externe ne sera envoyé.</AppText>}{reference && <Card><AppText>Référence : {reference}</AppText></Card>}<ControlledField control={form.control} name="message" label="Votre message" multiline maxLength={2000} /><MessageBanner message={send.error ? employeeError(send.error) : undefined} /><Button title={apiMode ? "Envoyer le message" : "Simuler l’envoi"} loading={send.isPending} onPress={form.handleSubmit(value => send.mutate(value))} /><SupportHistory /></ScreenLayout>;
 }

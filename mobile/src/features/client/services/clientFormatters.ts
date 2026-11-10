@@ -8,12 +8,13 @@ export const slotLabels: Record<TimeSlot, string> = { CUSTOM: 'Horaire personnal
 export const propertyLabels = { APARTMENT: 'Appartement', CONDO: 'Condo', HOUSE: 'Maison', '': 'Non précisé' };
 export const addressLabel = (address: ClientAddress | null) => address ? `${address.street}${address.unit ? `, unité ${address.unit}` : ''}, ${address.city}, ${address.province} ${address.postalCode}` : 'Adresse à préciser';
 export const money = (cents: number) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD' }).format(cents / 100);
-export const dateLabel = (value: string) => new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Toronto' }).format(new Date(value.length === 10 ? `${value}T16:00:00Z` : value));
+export const dateLabel = (value: string) => !value || Number.isNaN(Date.parse(value)) ? 'Date à confirmer' : new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Toronto' }).format(new Date(value.length === 10 ? `${value}T16:00:00Z` : value));
 export const todayLocal = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 export const effectiveQuoteStatus = (quote: ClientQuote, now = Date.now()): QuoteStatus => quote.status === 'PENDING' && Date.parse(quote.expiresAt) <= now ? 'EXPIRED' : quote.status;
 export const canCancelReservation = (reservation: ClientReservation, now = Date.now()) => (reservation.status === 'PENDING' || reservation.status === 'CONFIRMED') && now < Date.parse(reservation.cancellationDeadline);
 export const reservationGroup = (reservation: ClientReservation, now = Date.now()) => reservation.status === 'CANCELLED' ? 'cancelled' : reservation.status === 'COMPLETED' || Date.parse(reservation.endAt) <= now ? 'past' : 'upcoming';
 export function formatReservation(reservation: Pick<ClientReservation, 'startAt' | 'endAt' | 'timeZone'>) {
+  if (!reservation.startAt || !reservation.endAt) return { date: 'Date à confirmer', time: 'Horaire à confirmer' };
   const time = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit', timeZone: reservation.timeZone });
   return { date: dateLabel(reservation.startAt), time: `${time.format(new Date(reservation.startAt))} – ${time.format(new Date(reservation.endAt))}` };
 }

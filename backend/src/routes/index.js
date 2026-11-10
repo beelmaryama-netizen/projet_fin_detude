@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import fileRoutes from './files.routes.js';
+import integrationRoutes from './integration.routes.js';
 import authRoutes from './auth.routes.js';
 import usersRoutes from './users.routes.js';
 import addressesRoutes from './addresses.routes.js';
@@ -12,6 +14,8 @@ import notificationsRoutes from './notifications.routes.js';
 const router = Router();
 
 router.use('/auth', authRoutes);
+router.use('/files', fileRoutes);
+router.use(integrationRoutes);
 router.use('/users', usersRoutes);
 router.use('/addresses', addressesRoutes);
 // Montés à la racine AVANT /requests et /missions : ils gèrent

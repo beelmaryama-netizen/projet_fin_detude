@@ -1,4 +1,7 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+vi.mock('./api/config', () => ({ apiMode: false, apiBaseURL: '' }));
+vi.mock('../features/auth/services/apiAuthService', () => ({ apiAuthService: {}, restoreApiSession: vi.fn() }));
+vi.mock('./tokenStorage', () => ({ tokenStorage: { read: async () => null, write: async () => undefined, clear: async () => undefined } }));
 const disk = vi.hoisted(() => ({ files: new Map<string, string>(), fail: false }));
 vi.mock('react-native', () => ({ Platform: { OS: 'ios' }, AppState: { addEventListener: vi.fn(() => ({ remove: vi.fn() })) } }));
 vi.mock('expo-file-system/legacy', () => ({

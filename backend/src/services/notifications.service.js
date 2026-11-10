@@ -21,10 +21,16 @@ export const TEMPLATES = {
 // Crée la notification en base puis tente le push.
 // Ne lance JAMAIS d'erreur : une notification ratée ne doit pas casser l'action métier.
 export async function notify(userIds, type, entity = {}) {
-  const ids = [...new Set(userIds.filter(Boolean))];
+  let ids = [...new Set(userIds.filter(Boolean))];
   if (ids.length === 0) return;
 
   try {
+    const preference = { QUOTE_SENT: 'newQuotes', APPOINTMENT_CONFIRMED: 'bookingConfirmations', APPOINTMENT_RESCHEDULED: 'bookingChanges', APPOINTMENT_CANCELLED: 'bookingChanges', MISSION_ASSIGNED: 'assignments', MISSION_UNASSIGNED: 'changes', MISSION_CANCELLED: 'changes' }[type];
+    if (preference) {
+      const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, notificationPreferences: true } });
+      ids = users.filter(u => u.notificationPreferences?.[preference] !== false).map(u => u.id);
+      if (!ids.length) return;
+    }
     const { title, body } = TEMPLATES[type]();
     await prisma.notification.createMany({
       data: ids.map((userId) => ({

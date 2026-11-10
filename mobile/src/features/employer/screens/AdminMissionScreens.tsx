@@ -1,3 +1,5 @@
+import { apiMode } from '../../../services/api/config';
+import { adminActions } from '../services/apiAdminService';
 import { useEmployerTheme, type EmployerTheme } from '../theme';
 import { useAdminFilterStore } from '../../../store/adminFilterStore';
 import { useAuthStore } from '../../../store/authStore';
@@ -148,12 +150,13 @@ function AssignmentScreen({ route, onNavigate, onBack }: AdminScreenProps & { ro
   const validSelection = selection.length === requiredCount && selection.every(id => store.employees.some(employee => employee.id === id && employee.active) && !overlappingMission(store, mission, id));
   const employees = store.employees.filter(employee => normalize(`${employeeName(employee)} ${employee.city} ${employee.specialties.join(' ')}`).includes(normalize(query.trim())))
     .sort((a, b) => Number(b.active) - Number(a.active) || employeeName(a).localeCompare(employeeName(b), 'fr'));
-  const confirm = () => {
-    const result = store.setMissionEmployees(mission.id, selection);
+  const confirm = async () => {
+    const result = await adminActions.setMissionEmployees(mission.id, selection);
     setConfirming(false);
     setError(!result.ok);
     setAssigned(result.ok);
-    setMessage(result.ok ? 'Équipe assignée à la mission dans la démonstration locale.' : result.error);
+    if (apiMode && result.ok && typeof result.value === 'string') onNavigate({ screen: 'mission-detail', missionId: result.value });
+    setMessage(result.ok ? 'Équipe assignée à la mission.' : result.error);
   };
   return <AdminPage title="Assigner un employé" subtitle="Vérifiez les spécialités et les disponibilités avant de confirmer." onBack={onBack}>
     <AdminCard>
@@ -231,7 +234,7 @@ function MissionDetailScreen({ route, onNavigate, onBack }: AdminScreenProps & {
   const offer = store.offers.find(item => item.id === mission.offerId);
   const audit = store.audit.filter(event => event.entityId === mission.id).sort((a, b) => b.at.localeCompare(a.at));
   const completedTasks = mission.checklist.filter(task => task.completed).length;
-  const saveSchedule = () => {
+  const saveSchedule = async () => {
     const start = timeMinutes(startTime), end = timeMinutes(endTime);
     const errors = {
       date: isValidDate(date) ? undefined : 'Indiquez une date valide au format AAAA-MM-JJ.',
@@ -240,16 +243,16 @@ function MissionDetailScreen({ route, onNavigate, onBack }: AdminScreenProps & {
     };
     setFieldErrors(errors);
     if (errors.date || errors.start || errors.end) return;
-    const result = store.rescheduleMission(mission.id, date, startTime, endTime);
+    const result = await adminActions.rescheduleMission(mission.id, date, startTime, endTime);
     setError(!result.ok);
-    setMessage(result.ok ? 'Horaire mis à jour dans la démonstration locale.' : result.error);
+    setMessage(result.ok ? 'Horaire mis à jour.' : result.error);
     if (result.ok) setEditing(false);
   };
-  const cancel = () => {
-    const result = store.cancelMission(mission.id);
+  const cancel = async () => {
+    const result = await adminActions.cancelMission(mission.id);
     setConfirmCancel(false);
     setError(!result.ok);
-    setMessage(result.ok ? 'Mission annulée dans la démonstration locale.' : result.error);
+    setMessage(result.ok ? 'Mission annulée.' : result.error);
   };
   return <AdminPage title="Détail de la mission" subtitle={mission.id} onBack={onBack}>
     <AdminNotice message={message} error={error} />

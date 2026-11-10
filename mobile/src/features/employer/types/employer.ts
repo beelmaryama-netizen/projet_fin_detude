@@ -1,7 +1,7 @@
 import type { RequestCategory } from '../../requests/types/request';
 
 /** Local SCRUM-17 demonstration labels, independent of any future API status contract. */
-export type EmployerRequestStatus = 'new' | 'review' | 'waiting' | 'offer-sent' | 'confirmed';
+export type EmployerRequestStatus = 'new' | 'review' | 'waiting' | 'offer-sent' | 'confirmed' | 'completed' | 'cancelled' | 'closed';
 export type EmployerRequestFilter = 'all' | 'new' | 'actionable' | 'waiting' | 'confirmed';
 
 export interface EmployerRequest {
@@ -22,5 +22,5 @@ export const employerStatusLabels: Record<EmployerRequestStatus, string> = {
   review: 'En analyse',
   waiting: 'En attente',
   'offer-sent': 'Offre envoyée',
-  confirmed: 'Confirmée',
+  confirmed: 'Confirmée', completed: 'Terminée', cancelled: 'Annulée', closed: 'Fermée',
 };

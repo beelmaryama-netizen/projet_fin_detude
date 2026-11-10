@@ -1,3 +1,5 @@
+import { apiMode } from '../../../services/api/config';
+import { adminActions } from '../services/apiAdminService';
 import { useEmployerTheme, type EmployerTheme } from '../theme';
 import { useMemo, useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
@@ -22,9 +24,9 @@ function ServiceCatalogue({ onBack }: AdminScreenProps) {
   const [error, setError] = useState('');
   const services = store.services.filter(service => `${service.name} ${service.description}`.toLocaleLowerCase('fr-CA').includes(query.trim().toLocaleLowerCase('fr-CA'))
     && (filter === 'all' || service.active === (filter === 'active')));
-  function save() {
+  async function save() {
     if (!editing) return;
-    const result = store.updateService(editing.id, editing);
+    const result = await adminActions.updateService(editing.id, editing);
     if (!result.ok) { setError(result.error); return; }
     setEditing(null); setError(''); setNotice('Le service a été mis à jour pour cette session.');
   }
@@ -103,7 +105,7 @@ function Settings({ onBack }: AdminScreenProps) {
 
   const store = useAdminStore();
   const [values, setValues] = useState<AdminSettings>({ ...store.settings });
-  const [tax, setTax] = useState(String(store.settings.defaultTaxPercent).replace('.', ','));
+  const [tax, setTax] = useState(String(apiMode ? 14.975 : store.settings.defaultTaxPercent).replace('.', ','));
   const [validity, setValidity] = useState(String(store.settings.defaultValidityHours));
   const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [confirm, setConfirm] = useState(false);
   function prepare() {
@@ -112,8 +114,8 @@ function Settings({ onBack }: AdminScreenProps) {
     if (!values.companyName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.contactEmail.trim())) { setError('Renseignez le nom de l’entreprise et un courriel valide.'); return; }
     setValues({ ...values, defaultTaxPercent: rate, defaultValidityHours: hours }); setError(''); setSuccess(''); setConfirm(true);
   }
-  function save() {
-    const result = store.updateSettings(values); setConfirm(false);
+  async function save() {
+    const result = await adminActions.updateSettings(values); setConfirm(false);
     if (!result.ok) setError(result.error); else { setError(''); setSuccess('Paramètres enregistrés pour cette session. Les offres existantes conservent leurs montants.'); }
   }
   return <AdminPage showFormLogo title="Paramètres administratifs" subtitle="Coordonnées et valeurs utilisées pour les nouvelles estimations." onBack={onBack}>
@@ -123,7 +125,7 @@ function Settings({ onBack }: AdminScreenProps) {
       <AdminField label="Téléphone de contact" value={values.contactPhone} keyboardType="phone-pad" maxLength={24} onChangeText={contactPhone => setValues({ ...values, contactPhone })} />
     </AdminCard>
     <AdminCard><AppText style={s.heading}>Nouvelles offres</AppText>
-      <AdminField label="Taux de taxes par défaut (%)" value={tax} onChangeText={setTax} keyboardType="decimal-pad" maxLength={7} />
+      <AdminField label="Taux de taxes par défaut (%)" editable={!apiMode} value={tax} onChangeText={setTax} keyboardType="decimal-pad" maxLength={7} />
       <AdminField label="Validité par défaut (heures)" value={validity} onChangeText={setValidity} keyboardType="number-pad" maxLength={3} />
       <View style={[s.row, { justifyContent: 'space-between' }]}><AppText style={[s.text, { flex: 1 }]}>Alertes de nouvelles demandes</AppText>
         <Switch accessibilityLabel="Alertes de nouvelles demandes" value={values.notifyNewRequests} onValueChange={notifyNewRequests => setValues({ ...values, notifyNewRequests })} trackColor={{ false: theme.border, true: theme.blue }} thumbColor={theme.text} />
