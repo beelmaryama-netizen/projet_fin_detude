@@ -1,6 +1,6 @@
-# MagicPro — Projet de fin d’études
+# MagiquePro — Projet de fin d’études
 
-**MagicPro (MagiquePro)** est un projet d’application de services d’entretien ménager. Il vise à permettre aux clients de préparer une demande de service, de recevoir une offre et de suivre leurs réservations, avec des espaces distincts pour les clients, les employés et les administrateurs.
+**MagiquePro (MagiquePro)** est un projet d’application de services d’entretien ménager. Il vise à permettre aux clients de préparer une demande de service, de recevoir une offre et de suivre leurs réservations, avec des espaces distincts pour les clients, les employés et les administrateurs.
 
 Le projet est réalisé en équipe dans **DevConnect**, avec un suivi Scrum dans Jira et des branches de travail sur GitHub.
 
