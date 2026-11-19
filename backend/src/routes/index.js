@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import documentRoutes, { documentFiles } from './documents.routes.js';
+import catalogRoutes from './catalog.routes.js';
 import fileRoutes from './files.routes.js';
 import integrationRoutes from './integration.routes.js';
 import authRoutes from './auth.routes.js';
@@ -15,6 +17,9 @@ const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/files', fileRoutes);
+router.use('/document-files', documentFiles);
+router.use(documentRoutes);
+router.use(catalogRoutes);
 router.use(integrationRoutes);
 router.use('/users', usersRoutes);
 router.use('/addresses', addressesRoutes);

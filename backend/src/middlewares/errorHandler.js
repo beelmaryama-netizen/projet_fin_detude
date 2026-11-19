@@ -6,15 +6,24 @@ export function notFound(req, res) {
 }
 
 export function errorHandler(err, req, res, next) {
+  if (err.type === 'entity.too.large')
+    return res
+      .status(413)
+      .json({ message: 'Fichier trop volumineux (10 Mo maximum)' });
   if (err instanceof ZodError) {
     return res.status(400).json({
       message: 'Données invalides',
-      errors: err.issues.map((i) => ({ field: i.path.join('.'), message: i.message })),
+      errors: err.issues.map((i) => ({
+        field: i.path.join('.'),
+        message: i.message,
+      })),
     });
   }
 
   if (err instanceof AppError) {
-    return res.status(err.status).json({ message: err.message, code: err.code });
+    return res
+      .status(err.status)
+      .json({ message: err.message, code: err.code });
   }
 
   // Erreurs Prisma connues
@@ -22,7 +31,9 @@ export function errorHandler(err, req, res, next) {
     return res.status(409).json({ message: 'Cette valeur existe déjà' });
   }
   if (err.code === 'P2003') {
-    return res.status(409).json({ message: 'Élément utilisé ailleurs, suppression impossible' });
+    return res
+      .status(409)
+      .json({ message: 'Élément utilisé ailleurs, suppression impossible' });
   }
   if (err.code === 'P2025') {
     return res.status(404).json({ message: 'Élément introuvable' });

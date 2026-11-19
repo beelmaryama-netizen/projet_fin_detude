@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/AppError.js';
+import { documentDto } from './documents.service.js';
 import { withUrls } from '../utils/photoUrl.js';
 
 // Transitions autorisées pour l'admin (cycle de vie du dossier de référence)
@@ -19,6 +20,7 @@ const TRANSITIONS = {
 const CLIENT_CANCELLABLE = ['NEW', 'UNDER_REVIEW', 'AWAITING_CLIENT'];
 
 const detailInclude = {
+  documents: true,
   address: true,
   residentialDetails: true,
   businessDetails: true,
@@ -27,15 +29,28 @@ const detailInclude = {
 };
 
 export async function create(clientId, data) {
-  const { requestType, addressId, description, availabilities, residential, business } = data;
+  const {
+    requestType,
+    addressId,
+    description,
+    availabilities,
+    residential,
+    business,
+  } = data;
 
   if (data.submissionKey) {
-    const existing = await prisma.serviceRequest.findUnique({ where: { clientId_submissionKey: { clientId, submissionKey: data.submissionKey } }, include: detailInclude });
+    const existing = await prisma.serviceRequest.findUnique({
+      where: {
+        clientId_submissionKey: { clientId, submissionKey: data.submissionKey },
+      },
+      include: detailInclude,
+    });
     if (existing) return existing;
   }
   // L'adresse doit appartenir au client
   const address = await prisma.address.findUnique({ where: { id: addressId } });
-  if (!address || address.userId !== clientId) throw new AppError(404, 'Adresse introuvable');
+  if (!address || address.userId !== clientId)
+    throw new AppError(404, 'Adresse introuvable');
 
   // Création imbriquée = une seule transaction (tout ou rien)
   return prisma.serviceRequest.create({
@@ -47,8 +62,12 @@ export async function create(clientId, data) {
       requestType,
       description,
       availabilities: { create: availabilities },
-      ...(requestType === 'RESIDENTIAL' && { residentialDetails: { create: residential } }),
-      ...(requestType === 'BUSINESS' && { businessDetails: { create: business } }),
+      ...(requestType === 'RESIDENTIAL' && {
+        residentialDetails: { create: residential },
+      }),
+      ...(requestType === 'BUSINESS' && {
+        businessDetails: { create: business },
+      }),
     },
     include: detailInclude,
   });
@@ -71,14 +90,28 @@ export async function list(user, { status, requestType, page, pageSize }) {
       include: {
         address: { select: { label: true, city: true } },
         ...(user.role === 'ADMIN' && {
-          client: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
         }),
       },
     }),
     prisma.serviceRequest.count({ where }),
   ]);
 
-  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
 }
 
 export async function getOne(user, id) {
@@ -87,7 +120,15 @@ export async function getOne(user, id) {
     include: {
       ...detailInclude,
       ...(user.role === 'ADMIN' && {
-        client: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
       }),
     },
   });
@@ -96,18 +137,29 @@ export async function getOne(user, id) {
   if (!request || (user.role === 'CLIENT' && request.clientId !== user.id)) {
     throw new AppError(404, 'Demande introuvable');
   }
-  return { ...request, photos: withUrls(request.photos) };
+  return {
+    ...request,
+    documents: request.documents.map(documentDto),
+    photos: withUrls(request.photos),
+  };
 }
 
 export async function cancelByClient(clientId, id) {
   const request = await prisma.serviceRequest.findUnique({ where: { id } });
-  if (!request || request.clientId !== clientId) throw new AppError(404, 'Demande introuvable');
+  if (!request || request.clientId !== clientId)
+    throw new AppError(404, 'Demande introuvable');
 
   if (!CLIENT_CANCELLABLE.includes(request.status)) {
-    throw new AppError(409, `Impossible d'annuler une demande au statut ${request.status}`);
+    throw new AppError(
+      409,
+      `Impossible d'annuler une demande au statut ${request.status}`,
+    );
   }
 
-  return prisma.serviceRequest.update({ where: { id }, data: { status: 'CANCELLED' } });
+  return prisma.serviceRequest.update({
+    where: { id },
+    data: { status: 'CANCELLED' },
+  });
 }
 
 export async function updateStatus(id, newStatus) {
@@ -115,8 +167,14 @@ export async function updateStatus(id, newStatus) {
   if (!request) throw new AppError(404, 'Demande introuvable');
 
   if (!TRANSITIONS[request.status].includes(newStatus)) {
-    throw new AppError(409, `Transition interdite : ${request.status} -> ${newStatus}`);
+    throw new AppError(
+      409,
+      `Transition interdite : ${request.status} -> ${newStatus}`,
+    );
   }
 
-  return prisma.serviceRequest.update({ where: { id }, data: { status: newStatus } });
+  return prisma.serviceRequest.update({
+    where: { id },
+    data: { status: newStatus },
+  });
 }

@@ -1,3 +1,5 @@
+import socialRoutes from './social.routes.js';
+import securityRoutes from './security.routes.js';
 import { Router } from 'express';
 import * as ctrl from '../controllers/auth.controller.js';
 import { validate } from '../middlewares/validate.js';
@@ -12,9 +14,21 @@ import {
 } from '../validators/auth.validator.js';
 
 const router = Router();
+router.use(securityRoutes);
+router.use('/social', socialRoutes);
 
-router.post('/register', authLimiter, validate(registerSchema), asyncHandler(ctrl.register));
-router.post('/login', authLimiter, validate(loginSchema), asyncHandler(ctrl.login));
+router.post(
+  '/register',
+  authLimiter,
+  validate(registerSchema),
+  asyncHandler(ctrl.register),
+);
+router.post(
+  '/login',
+  authLimiter,
+  validate(loginSchema),
+  asyncHandler(ctrl.login),
+);
 router.post('/refresh', validate(refreshSchema), asyncHandler(ctrl.refresh));
 router.post('/logout', validate(refreshSchema), asyncHandler(ctrl.logout));
 
@@ -23,7 +37,7 @@ router.post(
   '/change-password',
   requireAuth,
   validate(changePasswordSchema),
-  asyncHandler(ctrl.changePassword)
+  asyncHandler(ctrl.changePassword),
 );
 
 export default router;

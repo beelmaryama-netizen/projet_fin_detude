@@ -8,6 +8,10 @@ export const api = () => request(app);
 // Vide toutes les tables (ordre enfants -> parents à cause des clés étrangères)
 export async function resetDb() {
   await prisma.$transaction([
+    prisma.pushReceipt.deleteMany(),
+    prisma.authChallenge.deleteMany(),
+    prisma.requestDocument.deleteMany(),
+    prisma.serviceCatalogItem.deleteMany(),
     prisma.supportTicket.deleteMany(),
     prisma.appSetting.deleteMany(),
     prisma.notification.deleteMany(),
@@ -34,7 +38,11 @@ export async function resetDb() {
 let counter = 0;
 
 // Crée un utilisateur directement en BD
-export async function createUser({ role = 'CLIENT', password = 'Test1234', ...data } = {}) {
+export async function createUser({
+  role = 'CLIENT',
+  password = 'Test1234',
+  ...data
+} = {}) {
   counter += 1;
   const user = await prisma.user.create({
     data: {
@@ -52,8 +60,14 @@ export async function createUser({ role = 'CLIENT', password = 'Test1234', ...da
 // Crée un utilisateur et renvoie son accessToken
 export async function createUserWithToken(options = {}) {
   const user = await createUser(options);
-  const res = await api().post('/api/auth/login').send({ email: user.email, password: user.password });
-  return { user, token: res.body.accessToken, refreshToken: res.body.refreshToken };
+  const res = await api()
+    .post('/api/auth/login')
+    .send({ email: user.email, password: user.password });
+  return {
+    user,
+    token: res.body.accessToken,
+    refreshToken: res.body.refreshToken,
+  };
 }
 
 export function createAddress(userId) {
@@ -78,7 +92,9 @@ export async function createRequest(clientId, status = 'NEW') {
       addressId: address.id,
       requestType: 'RESIDENTIAL',
       status,
-      residentialDetails: { create: { housingType: 'HOUSE', bedrooms: 3, bathrooms: 2 } },
+      residentialDetails: {
+        create: { housingType: 'HOUSE', bedrooms: 3, bathrooms: 2 },
+      },
     },
   });
 }

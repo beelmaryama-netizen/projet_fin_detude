@@ -1,6 +1,8 @@
 # MagicPro Mobile — Authentification et espace client
 
-Module Expo / React Native / TypeScript strict. Authentification et espace client avec services entièrement simulés. Aucun backend, envoi de courriel ou fournisseur OAuth réel n'est appelé. Voir `LIVRAISON_CLIENT.md` pour les écrans livrés, services, routes et limites.
+Module Expo / React Native / TypeScript strict. Le mode API connecte les trois rôles au backend Express/Prisma. Voir [INTEGRATION_API.md](../INTEGRATION_API.md) pour démarrer et [BACKEND_COMPLETION.md](../BACKEND_COMPLETION.md) pour les codes, PDF, catalogue, rappels et configurations externes.
+
+Les notes ci-dessous décrivent l’implémentation initiale et le mode démo (`EXPO_PUBLIC_DATA_MODE=demo`). Elles ne remplacent pas les deux guides actuels. En mode API, aucun code fixe ni connexion sociale simulée n’est utilisé.
 
 ## Démarrer
 
