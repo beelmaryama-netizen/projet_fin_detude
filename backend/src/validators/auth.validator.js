@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const password = z
+export const password = z
   .string()
   .min(8, 'Minimum 8 caractères')
   .regex(/[A-Z]/, 'Au moins une majuscule')

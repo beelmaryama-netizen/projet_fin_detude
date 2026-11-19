@@ -1,56 +1,303 @@
+/// <reference types="node" />
 import { expect, it, vi } from 'vitest';
-vi.mock('./config', () => ({ apiMode: true, apiBaseURL: 'http://127.0.0.1:3000/api' }));
-vi.mock('../tokenStorage', () => ({ tokenStorage: { read: async () => null, write: async () => undefined, clear: async () => undefined } }));
+vi.mock('./config', () => ({
+  apiMode: true,
+  apiBaseURL: 'http://127.0.0.1:3000/api',
+}));
+vi.mock('../tokenStorage', () => ({
+  tokenStorage: {
+    read: async () => null,
+    write: async () => undefined,
+    clear: async () => undefined,
+  },
+}));
 vi.mock('expo-file-system/legacy', () => ({}));
 vi.mock('react-native', () => ({ Platform: { OS: 'web' } }));
-it.skipIf(process.env.MAGICPRO_LIVE_TEST !== '1')('uses real mobile adapters against the local API across all three roles', async () => {
- const { apiAuthService } = await import('../../features/auth/services/apiAuthService');
- const { apiClientServices: client } = await import('../../features/client/services/apiClientService');
- const { apiEmployeeService: employee } = await import('../../features/employee/services/apiEmployeeService');
- const { adminActions, loadAdminData, createApiEmployee } = await import('../../features/employer/services/apiAdminService');
- const { useAdminStore } = await import('../../features/employer/store/adminStore');
- const { useAuthStore } = await import('../../store/authStore');
- const { request } = await import('./transport');
- const email = 'live-' + Date.now() + '@magicpro.test';
- await apiAuthService.register({ email, password: 'ClientLive!2026', firstName: 'Test', lastName: 'API', phone: '5145550123' });
- const user = useAuthStore.getState().session!.user;
- const address = await client.addresses.save(user, { label: 'Maison', street: '100 rue Test', unit: '', city: 'Montréal', province: 'QC', postalCode: 'H2X 3K2', accessNotes: '', isDefault: true });
- const { emptyBusinessDetails } = await import('../../features/requests/types/business');
- for (const [category, establishmentType, zone] of [['COMMERCIAL', 'Bureau', 'Bureaux'], ['INDUSTRIAL', 'Usine', 'Production'], ['MEDICAL', 'Clinique', 'Salles de soins']] as const) {
-  const dossier = await client.requests.create(user, { category, business: { ...emptyBusinessDetails(), establishmentType, companyName: 'Test ' + category, areaSqft: '1000', siteAddress: '100 rue Test, Montréal', zones: [zone], description: 'Entretien professionnel de test', frequency: 'Hebdomadaire' }, documents: [], photos: [], schedule: { availabilities: [{ date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0,10), slot: 'MORNING' }], addressId: address.id, instructions: '', accessNotes: '' }, submissionKey: email + category });
-  expect(dossier.category).toBe(category);
-  if (dossier.category === 'RESIDENTIAL') throw Error('Catégorie professionnelle perdue');
-  expect(dossier.business.establishmentType).toBe(establishmentType);
-  expect(dossier.business.zones).toEqual([zone]);
- }
- const photoUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1X8AAAAASUVORK5CYII=';
- const date = new Date(Date.now() + 7 * 86400000).toISOString().slice(0,10);
- const created = await client.requests.create(user, { category: 'RESIDENTIAL', residential: { propertyType: 'HOUSE', bedrooms: 2, bathrooms: 1, floors: 1, hasPets: false, areaSqft: '1000', description: 'Entretien de test API', services: ['Cuisine'], parking: 'Allée' }, schedule: { availabilities: [{ date, slot: 'CUSTOM', startTime: '09:00', endTime: '11:00' }], addressId: address.id, instructions: '', accessNotes: '' }, photos: [{ id: 'client-before', uri: photoUri, name: 'Photo du client' }], submissionKey: email });
- if (created.category !== 'RESIDENTIAL') throw Error('Residential request expected');
- expect(created.residential.services).toContain('Cuisine'); expect(created.photos).toHaveLength(1); expect((await fetch(created.photos[0]!.uri)).ok).toBe(true);
- await apiAuthService.logout();
- await apiAuthService.login({ email: 'admin@magicpro.ca', password: process.env.MAGICPRO_TEST_ADMIN_PASSWORD! });
- await loadAdminData();
- const estimate = await adminActions.saveEstimate({ requestId: created.id, durationHours: 2, employeeCount: 1, subtotal: '100', taxPercent: '14.975', date, startTime: '09:00', endTime: '11:00', validityHours: 48, notes: 'Test API', requiresBeforePhotos: true, requiresAfterPhotos: true });
- if (!estimate.ok) throw Error(estimate.error);
- expect((await adminActions.sendOffer(estimate.value.id)).ok).toBe(true);
- await apiAuthService.logout(); await apiAuthService.login({ email, password: 'ClientLive!2026' });
- const offer = await client.quotes.get(user, estimate.value.id); expect(offer.totalCents).toBe(11498);
- const reservation = await client.quotes.accept(user, offer.id); expect(reservation.status).toBe('PENDING');
- await apiAuthService.logout(); await apiAuthService.login({ email: 'admin@magicpro.ca', password: process.env.MAGICPRO_TEST_ADMIN_PASSWORD! });
- const staff = await createApiEmployee({ email: 'employee-' + email, firstName: 'Agent', lastName: 'API', phone: '', city: 'Montréal', availability: '', specialties: ['Résidentiel'] });
- await loadAdminData(); const pending = useAdminStore.getState().missions.find(m => m.requestId === created.id)!;
- const assigned = await adminActions.setMissionEmployees(pending.id, [staff.id]); if (!assigned.ok) throw Error(assigned.error);
- const mission = useAdminStore.getState().missions.find(m => m.requestId === created.id)!;
- await apiAuthService.logout(); await apiAuthService.login({ email: staff.email, password: staff.password });
- await apiAuthService.changePassword(staff.id, staff.password, 'EmployeLive!2026');
- const employeeUser = useAuthStore.getState().session!.user;
- const active = await employee.start(employeeUser, { id: mission.id, photos: [{ id: 'before-test', uri: photoUri, phase: 'BEFORE', createdAt: new Date().toISOString() }] }); expect(active.status).toBe('IN_PROGRESS');
- await employee.toggle(employeeUser, { id: mission.id, itemId: active.checklist[0]!.id, isDone: true, note: 'Contrôle API' });
- await employee.addPhoto(employeeUser, { id: mission.id, photo: { id: 'after-test', uri: photoUri, phase: 'AFTER', createdAt: new Date().toISOString() } });
- await employee.complete(employeeUser, { id: mission.id, report: { note: 'Test complet réussi', incident: '' } });
- await apiAuthService.logout(); await apiAuthService.login({ email, password: 'ClientLive!2026' });
- const completed = await client.reservations.get(user, reservation.id); expect(completed.status).toBe('COMPLETED'); expect(completed.report).toBe('Test complet réussi'); expect(completed.team).toContain('Agent API');
- const sent = await client.support.send(user, { subject: 'Test', message: 'Message intégré', reservationId: reservation.id }); expect(sent.reference).toBeTruthy();
- await apiAuthService.logout();
-}, 60000);
+it.skipIf(process.env.MAGICPRO_LIVE_TEST !== '1')(
+  'uses real mobile adapters against the local API across all three roles',
+  async () => {
+    const { apiAuthService, requestApiMfa } =
+      await import('../../features/auth/services/apiAuthService');
+    const { apiClientServices: client } =
+      await import('../../features/client/services/apiClientService');
+    const { apiEmployeeService: employee } =
+      await import('../../features/employee/services/apiEmployeeService');
+    const { adminActions, loadAdminData, createApiEmployee } =
+      await import('../../features/employer/services/apiAdminService');
+    const { useAdminStore } =
+      await import('../../features/employer/store/adminStore');
+    const { useAuthStore } = await import('../../store/authStore');
+    const { request } = await import('./transport');
+    const email = 'live-' + Date.now() + '@magicpro.test';
+    const readCode = async (id: string) => {
+      const fs = await import('node:fs/promises');
+      const path = await import('node:path');
+      const directory = process.env.MAGICPRO_MAIL_OUTBOX;
+      if (!directory) throw Error('Boîte de test locale requise');
+      const mail = JSON.parse(
+        await fs.readFile(path.join(directory, id + '.json'), 'utf8'),
+      ) as { text: string };
+      const code = mail.text.match(/\b\d{6}\b/)?.[0];
+      if (!code) throw Error('Code absent');
+      return code;
+    };
+    const registration = await apiAuthService.register({
+      email,
+      password: 'ClientLive!2026',
+      firstName: 'Test',
+      lastName: 'API',
+      phone: '5145550123',
+    });
+    if (registration.kind === 'verification')
+      await apiAuthService.verifyCode(
+        registration.challenge.id,
+        await readCode(registration.challenge.id),
+      );
+    const user = useAuthStore.getState().session!.user;
+    const address = await client.addresses.save(user, {
+      label: 'Maison',
+      street: '100 rue Test',
+      unit: '',
+      city: 'Montréal',
+      province: 'QC',
+      postalCode: 'H2X 3K2',
+      accessNotes: '',
+      isDefault: true,
+    });
+    const pdfUri =
+      'data:application/pdf;base64,' +
+      Buffer.from(
+        '%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n%%EOF',
+      ).toString('base64');
+    const { emptyBusinessDetails } =
+      await import('../../features/requests/types/business');
+    for (const [category, establishmentType, zone] of [
+      ['COMMERCIAL', 'Bureau', 'Bureaux'],
+      ['INDUSTRIAL', 'Usine', 'Production'],
+      ['MEDICAL', 'Clinique', 'Salles de soins'],
+    ] as const) {
+      const dossier = await client.requests.create(user, {
+        category,
+        business: {
+          ...emptyBusinessDetails(),
+          establishmentType,
+          companyName: 'Test ' + category,
+          areaSqft: '1000',
+          siteAddress: '100 rue Test, Montréal',
+          zones: [zone],
+          description: 'Entretien professionnel de test',
+          frequency: 'Hebdomadaire',
+        },
+        documents: [
+          {
+            id: 'document-' + category,
+            name: 'Plan.pdf',
+            uri: pdfUri,
+            size: 60,
+            mimeType: 'application/pdf',
+          },
+        ],
+        photos: [],
+        schedule: {
+          availabilities: [
+            {
+              date: new Date(Date.now() + 7 * 86400000)
+                .toISOString()
+                .slice(0, 10),
+              slot: 'MORNING',
+            },
+          ],
+          addressId: address.id,
+          instructions: '',
+          accessNotes: '',
+        },
+        submissionKey: email + category,
+      });
+      expect(dossier.category).toBe(category);
+      if (dossier.category === 'RESIDENTIAL')
+        throw Error('Catégorie professionnelle perdue');
+      expect(dossier.business.establishmentType).toBe(establishmentType);
+      expect(dossier.business.zones).toEqual([zone]);
+      expect(dossier.documents).toHaveLength(1);
+      expect((await fetch(dossier.documents[0]!.uri)).status).toBe(200);
+    }
+    const photoUri =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1X8AAAAASUVORK5CYII=';
+    const date = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    const created = await client.requests.create(user, {
+      category: 'RESIDENTIAL',
+      residential: {
+        propertyType: 'HOUSE',
+        bedrooms: 2,
+        bathrooms: 1,
+        floors: 1,
+        hasPets: false,
+        areaSqft: '1000',
+        description: 'Entretien de test API',
+        services: ['Cuisine'],
+        parking: 'Allée',
+      },
+      schedule: {
+        availabilities: [
+          { date, slot: 'CUSTOM', startTime: '09:00', endTime: '11:00' },
+        ],
+        addressId: address.id,
+        instructions: '',
+        accessNotes: '',
+      },
+      photos: [{ id: 'client-before', uri: photoUri, name: 'Photo du client' }],
+      submissionKey: email,
+    });
+    if (created.category !== 'RESIDENTIAL')
+      throw Error('Residential request expected');
+    expect(created.residential.services).toContain('Cuisine');
+    expect(created.photos).toHaveLength(1);
+    expect((await fetch(created.photos[0]!.uri)).ok).toBe(true);
+    await apiAuthService.logout();
+    await apiAuthService.login({
+      email: 'admin@magicpro.ca',
+      password: process.env.MAGICPRO_TEST_ADMIN_PASSWORD!,
+    });
+    await loadAdminData();
+    const estimate = await adminActions.saveEstimate({
+      requestId: created.id,
+      durationHours: 2,
+      employeeCount: 1,
+      subtotal: '100',
+      taxPercent: '14.975',
+      date,
+      startTime: '09:00',
+      endTime: '11:00',
+      validityHours: 48,
+      notes: 'Test API',
+      requiresBeforePhotos: true,
+      requiresAfterPhotos: true,
+    });
+    if (!estimate.ok) throw Error(estimate.error);
+    expect((await adminActions.sendOffer(estimate.value.id)).ok).toBe(true);
+    await apiAuthService.logout();
+    await apiAuthService.login({ email, password: 'ClientLive!2026' });
+    const offer = await client.quotes.get(user, estimate.value.id);
+    expect(offer.totalCents).toBe(11498);
+    const reservation = await client.quotes.accept(user, offer.id);
+    expect(reservation.status).toBe('PENDING');
+    await apiAuthService.logout();
+    await apiAuthService.login({
+      email: 'admin@magicpro.ca',
+      password: process.env.MAGICPRO_TEST_ADMIN_PASSWORD!,
+    });
+    const staff = await createApiEmployee({
+      email: 'employee-' + email,
+      firstName: 'Agent',
+      lastName: 'API',
+      phone: '',
+      city: 'Montréal',
+      availability: '',
+      specialties: ['Résidentiel'],
+    });
+    await loadAdminData();
+    const pending = useAdminStore
+      .getState()
+      .missions.find((m) => m.requestId === created.id)!;
+    const assigned = await adminActions.setMissionEmployees(pending.id, [
+      staff.id,
+    ]);
+    if (!assigned.ok) throw Error(assigned.error);
+    const mission = useAdminStore
+      .getState()
+      .missions.find((m) => m.requestId === created.id)!;
+    await apiAuthService.logout();
+    await apiAuthService.login({
+      email: staff.email,
+      password: staff.password,
+    });
+    await apiAuthService.changePassword(
+      staff.id,
+      staff.password,
+      'EmployeLive!2026',
+    );
+    const employeeUser = useAuthStore.getState().session!.user;
+    const active = await employee.start(employeeUser, {
+      id: mission.id,
+      photos: [
+        {
+          id: 'before-test',
+          uri: photoUri,
+          phase: 'BEFORE',
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+    expect(active.status).toBe('IN_PROGRESS');
+    await employee.toggle(employeeUser, {
+      id: mission.id,
+      itemId: active.checklist[0]!.id,
+      isDone: true,
+      note: 'Contrôle API',
+    });
+    await employee.addPhoto(employeeUser, {
+      id: mission.id,
+      photo: {
+        id: 'after-test',
+        uri: photoUri,
+        phase: 'AFTER',
+        createdAt: new Date().toISOString(),
+      },
+    });
+    await employee.complete(employeeUser, {
+      id: mission.id,
+      report: { note: 'Test complet réussi', incident: '' },
+    });
+    await apiAuthService.logout();
+    await apiAuthService.login({ email, password: 'ClientLive!2026' });
+    const completed = await client.reservations.get(user, reservation.id);
+    expect(completed.status).toBe('COMPLETED');
+    expect(completed.report).toBe('Test complet réussi');
+    expect(completed.team).toContain('Agent API');
+    const mfa = await requestApiMfa(user.id, true, 'ClientLive!2026');
+    await apiAuthService.setMfa(
+      user.id,
+      true,
+      'ClientLive!2026',
+      await readCode(mfa.id),
+    );
+    await apiAuthService.logout();
+    const login = await apiAuthService.login({
+      email,
+      password: 'ClientLive!2026',
+    });
+    expect(login.kind).toBe('verification');
+    if (login.kind !== 'verification') throw Error('MFA non demandée');
+    await apiAuthService.verifyCode(
+      login.challenge.id,
+      await readCode(login.challenge.id),
+    );
+    const recovery = await apiAuthService.requestPasswordReset(email);
+    const proof = await apiAuthService.verifyCode(
+      recovery.id,
+      await readCode(recovery.id),
+    );
+    if (proof.kind !== 'recovery')
+      throw Error('Vérification de récupération invalide');
+    await apiAuthService.resetPassword(proof.resetToken, 'ClientReset!2026');
+    await apiAuthService.logout();
+    const afterReset = await apiAuthService.login({
+      email,
+      password: 'ClientReset!2026',
+    });
+    if (afterReset.kind !== 'verification')
+      throw Error('MFA perdue après récupération');
+    await apiAuthService.verifyCode(
+      afterReset.challenge.id,
+      await readCode(afterReset.challenge.id),
+    );
+    const sent = await client.support.send(user, {
+      subject: 'Test',
+      message: 'Message intégré',
+      reservationId: reservation.id,
+    });
+    expect(sent.reference).toBeTruthy();
+    await apiAuthService.logout();
+  },
+  60000,
+);

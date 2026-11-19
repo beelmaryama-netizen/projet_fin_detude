@@ -89,7 +89,11 @@ Ce dernier test utilise les vrais adaptateurs mobiles et crée des comptes/dossi
 - API locale et connexion à la base : disponibles après redémarrage du serveur.
 - Vérification Git des espaces : réussie ; secrets et exports exclus du versionnement.
 
-## Limites restantes
+## Compléments backend
+
+Les fonctions ajoutées après cette première intégration sont détaillées dans [BACKEND_COMPLETION.md](BACKEND_COMPLETION.md). Les codes de vérification, récupération et MFA, les PDF, le catalogue et les rappels sont maintenant implémentés. Les emails de développement restent dans une boîte locale. Google/Apple et le push disposent du support serveur mais nécessitent la configuration et le raccordement natif décrits dans ce guide.
+
+## Limites de la première intégration (historique, remplacées par le guide ci-dessus)
 
 - L’API ne propose pas encore récupération de mot de passe par email/code, OTP/MFA ou Google/Apple. Les appels correspondants retournent une indisponibilité explicite ; aucune validation fictive en mode API.
 - Les pièces jointes PDF et l’édition du catalogue de services ne disposent pas encore du contrat backend nécessaire.

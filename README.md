@@ -4,7 +4,7 @@
 
 Le projet est réalisé en équipe dans **DevConnect**, avec un suivi Scrum dans Jira et des branches de travail sur GitHub.
 
-> **État actuel :** l’application mobile fonctionne avec des données simulées. L’API et le schéma MySQL sont développés séparément ; le mobile n’est pas encore connecté au backend. Les fonctionnalités présentes dans le code ne constituent pas toutes un parcours intégré validé.
+> **État actuel :** les parcours client, employé et administration sont connectés à l’API Express/Prisma. Vérification par code, récupération, MFA par courriel, PDF, catalogue et rappels sont implémentés. Voir [le démarrage local](INTEGRATION_API.md) et [les compléments backend et configurations externes](BACKEND_COMPLETION.md). Le mode démo est un choix explicite ; Google/Apple et le push natif nécessitent encore la configuration et le raccordement des fournisseurs.
 
 ## Sommaire
 
@@ -37,17 +37,17 @@ Les branches historiques **SCRUM-6** conservent les premiers travaux de base de 
 ### Application mobile
 
 - Écran d’accueil public, connexion, inscription, récupération du mot de passe et vérification par code.
-- Connexion de démonstration pour les rôles `CLIENT`, `EMPLOYEE` et `ADMIN`.
-- Accueil client avec catégories de service, réservations de démonstration et mode clair/sombre.
+- Connexion API pour les rôles `CLIENT`, `EMPLOYEE` et `ADMIN`, avec mode démo séparé.
+- Accueil client avec catégories de service, réservations enregistrées et mode clair/sombre.
 - Onglets **Accueil**, **Mes demandes**, **Réservations** et **Profil**.
 - Parcours résidentiel : **Type de service → Détails du logement → Date et préférences → Récapitulatif**.
 - Saisie du logement, superficie en pi², chambres, salles de bain, étages, présence d’animaux et description.
 - Sélection de cinq photos maximum, aperçu et suppression.
 - Date souhaitée valide, aujourd’hui ou ultérieure, choix matin/après-midi et notes facultatives.
-- Récapitulatif modifiable et conservation du brouillon pendant la session.
-- Effacement du brouillon à la déconnexion ou au changement de compte.
+- Récapitulatif modifiable et brouillons persistants séparés par compte et API.
+- Isolation des brouillons lors du changement de compte.
 
-Le récapitulatif **n’envoie aucune demande**. Les créneaux ne constituent pas une disponibilité confirmée. Les autres catégories ouvrent encore des écrans provisoires. Les boutons Google et Apple simulent une connexion ; ils ne réalisent pas d’authentification OAuth.
+Le récapitulatif envoie la demande à l’API. Les créneaux souhaités restent à confirmer par l’administration. Les parcours commercial, industriel et médical sont intégrés ; Autre reste une route provisoire. La validation serveur Google/Apple est disponible ; les boutons mobiles attendent le raccordement natif configuré.
 
 ### API backend
 
@@ -63,7 +63,7 @@ Le code Express contient des modules d’authentification, utilisateurs, adresse
 | Offres/devis | Offres d’une demande sous `/api/requests/:requestId/quotes` ; détail, modification, envoi, acceptation et refus sous `/api/quotes` |
 | Réservations | Liste et détail sous `/api/appointments` ; notes client, confirmation, report et annulation |
 
-Les permissions varient selon la route : un client accède à ses ressources et un administrateur aux opérations de gestion. Le module de missions des employés reste à développer. Le backend ne fournit pas encore tous les contrats nécessaires aux parcours simulés du mobile, notamment la récupération par code et la connexion sociale.
+Les permissions sont contrôlées côté serveur. Les missions employées, codes de sécurité, documents, catalogue, support et rappels sont intégrés ; leurs routes et limites sont décrites dans [BACKEND_COMPLETION.md](BACKEND_COMPLETION.md).
 
 ## Architecture et technologies
 
@@ -148,6 +148,8 @@ npm run ios      # Simulateur iOS sur macOS
 
 ### Comptes de démonstration
 
+Disponibles uniquement avec `EXPO_PUBLIC_DATA_MODE=demo`. Pour l’API, utiliser un compte de la base ou créer un compte client ; les identifiants locaux sont dans `backend/tmp/LOCAL_ACCESS.md` (non versionné).
+
 Mot de passe commun : **`MagicPro!2026`**. Code de vérification simulé : **`123456`**.
 
 | Courriel | Rôle | Vérification à la connexion |
@@ -157,7 +159,7 @@ Mot de passe commun : **`MagicPro!2026`**. Code de vérification simulé : **`12
 | `employee@magicpro.demo` | EMPLOYEE | Oui |
 | `admin@magicpro.demo` | ADMIN | Oui |
 
-Ces comptes appartiennent au **simulateur mobile**, pas à la base MySQL du backend. Les comptes créés, sessions et brouillons restent en mémoire et disparaissent au rechargement. Utiliser uniquement des données fictives pour cette démonstration.
+Ces comptes appartiennent au **simulateur mobile**, pas à la base MySQL du backend. Utiliser uniquement des données fictives pour cette démonstration. Les données API sont enregistrées sur le serveur ; les brouillons sont sauvegardés localement.
 
 ## Démarrer le backend
 
@@ -205,7 +207,7 @@ curl http://localhost:3000/health
 # Réponse attendue : {"status":"ok"}
 ```
 
-Pour lancer sans rechargement automatique : `npm start`. Le démarrage de l’API ne connecte pas automatiquement le mobile : un adaptateur compatible avec les contrats frontend reste nécessaire.
+Pour lancer sans rechargement automatique : `npm start`. Configurer `EXPO_PUBLIC_API_URL` dans le mobile et `PUBLIC_API_URL` dans le backend avec l’adresse joignable depuis le téléphone ; les adaptateurs sont implémentés.
 
 ## Tests et validation
 
@@ -221,7 +223,7 @@ npx expo export --platform all
 # Compilation des bundles web, Android et iOS
 ```
 
-La dernière validation de la réorganisation a réussi : **32 tests**, contrôle TypeScript et exports des trois plateformes. Les tests couvrent notamment l’authentification simulée, les champs résidentiels, les dates/créneaux, les photos et l’isolation du brouillon entre comptes.
+Validation actuelle : **168 tests mobiles**, **75 tests backend**, TypeScript strict et exports Android/iOS/web réussis. Le test réel des adaptateurs mobile/API passe également, avec photos, PDF, MFA et récupération. Les fournisseurs externes sont testés avec des réponses/identités contrôlées, sans livraison réelle sur appareil.
 
 Un export Android/iOS produit des bundles : il ne constitue ni un APK/IPA ni un test sur téléphone. Les nouveaux écrans date/récapitulatif ont aussi été parcourus dans un navigateur avant leur intégration à la branche avec le thème sombre ; l’affichage final sur appareils et la totalité du parcours sombre restent à vérifier.
 
@@ -268,16 +270,16 @@ La réorganisation a conservé l’historique des branches. Une story, une branc
 
 ## Limites et prochaines étapes
 
-- Connecter les services mobiles aux contrats de l’API et vérifier les réponses reçues.
-- Définir la gestion réelle des sessions, jetons, vérifications, récupération de mot de passe et OAuth.
-- Terminer les parcours non résidentiels et l’envoi/transfert réel des photos.
-- Valider les modules employeur/employé et développer les missions selon les besoins de l’équipe.
-- Exécuter la suite backend avec MySQL de test et réaliser les tests d’intégration mobile/API.
+- Configurer SMTP pour envoyer les courriels réels (boîte locale actuellement).
+- Configurer Google/Apple et raccorder leur autorisation native aux endpoints sociaux.
+- Enregistrer les appareils natifs et configurer APNs/FCM/Expo pour valider la livraison push.
 - Vérifier sur appareils la galerie, les permissions, le clavier, les zones sûres et l’accessibilité.
 - Réévaluer les dépendances avant une livraison ; ce dépôt est un environnement de développement et de démonstration.
 
 ### Documentation et aperçus
 
+- [Configuration API locale](INTEGRATION_API.md)
+- [Compléments backend et limites externes](BACKEND_COMPLETION.md)
 - [Organisation du dépôt](STRUCTURE_PROJET.md)
 - [Guide mobile](mobile/README.md)
 - [Livraison du parcours client](mobile/LIVRAISON_CLIENT.md)

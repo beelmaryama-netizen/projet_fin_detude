@@ -1,6 +1,7 @@
 // Envoi push via Firebase Cloud Messaging.
 // Activé seulement si FIREBASE_SERVICE_ACCOUNT_PATH est défini (jamais en test).
 import fs from 'fs';
+import { sendExpoPush, isExpoToken } from './expoPush.service.js';
 
 let messaging = null;
 let initialized = false;
@@ -27,11 +28,31 @@ async function getMessaging() {
 
 // Renvoie la liste des tokens invalides à supprimer
 export async function sendPush(tokens, { title, body, data }) {
+  if (process.env.NODE_ENV === 'test' || !tokens.length) return [];
+  const invalid = [];
+  const expoTokens = tokens.filter(isExpoToken);
+  if (expoTokens.length && process.env.EXPO_PUSH_ENABLED === 'true')
+    invalid.push(...(await sendExpoPush(expoTokens, { title, body, data })));
+  const direct = tokens.filter((token) => !isExpoToken(token));
   const fcm = await getMessaging();
-  if (!fcm || tokens.length === 0) return [];
-
-  const res = await fcm.sendEachForMulticast({ tokens, notification: { title, body }, data });
-  return res.responses
-    .map((r, i) => (!r.success && r.error?.code === 'messaging/registration-token-not-registered' ? tokens[i] : null))
-    .filter(Boolean);
+  if (fcm)
+    for (let i = 0; i < direct.length; i += 500) {
+      const batch = direct.slice(i, i + 500);
+      const res = await fcm.sendEachForMulticast({
+        tokens: batch,
+        notification: { title, body },
+        data,
+      });
+      res.responses.forEach((r, index) => {
+        if (
+          !r.success &&
+          [
+            'messaging/registration-token-not-registered',
+            'messaging/invalid-registration-token',
+          ].includes(r.error?.code)
+        )
+          invalid.push(batch[index]);
+      });
+    }
+  return invalid;
 }
